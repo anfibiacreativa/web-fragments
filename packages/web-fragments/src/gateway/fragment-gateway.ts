@@ -123,3 +123,40 @@ export class FragmentGateway {
 		} else return null;
 	}
 }
+
+/**
+ * Registers a list of fragments in the gateway worker so that they can be integrated
+ * with the gateway worker.
+ * @param fragment List of fragment configurations to register.
+ * @param gateway The gateway worker to register the fragments with.
+ * @returns The gateway worker with the fragments registered.
+ */
+export function registerWebFragments(fragment: FragmentConfig[], gateway: FragmentGateway) {
+	fragment.forEach((f) => {
+		validateFragmentConfig(f);
+		gateway.registerFragment(f);
+	});
+	return gateway;
+}
+
+/**
+ *
+ * @param f FragmentConfig to validate
+ * @throws Error if the FragmentConfig is invalid
+ * @returns void
+ */
+function validateFragmentConfig(f: FragmentConfig) {
+	if (!f.fragmentId) {
+		throw new Error('FragmentConfig must have a fragmentId.');
+	}
+	if (!Array.isArray(f.prePiercingClassNames)) {
+		throw new Error('FragmentConfig must have an array of prePiercingClassNames.');
+	}
+	if (!Array.isArray(f.routePatterns) || f.routePatterns.length === 0) {
+		throw new Error('FragmentConfig must have at least one routePattern.');
+	}
+	if (!f.endpoint) {
+		throw new Error('FragmentConfig must have an endpoint.');
+	}
+}
+
