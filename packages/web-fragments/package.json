@@ -6,17 +6,11 @@
 		"./gateway": {
 			"import": "./src/gateway/fragment-gateway.ts"
 		},
-		"./gateway/web": {
+		"./gateway/middleware": {
 			"import": "./src/gateway/middleware/web.ts"
-		},
-		"./gateway/node": {
-			"import": "./src/gateway/middleware/node.ts"
 		},
 		"./elements": {
 			"import": "./src/elements/index.ts"
-		},
-		"./utils": {
-			"import": "./src/gateway/utils/common-utils.ts"
 		}
 	},
 	"publishConfig": {
@@ -25,17 +19,13 @@
 				"import": "./dist/gateway.js",
 				"types": "./dist/gateway/index.d.ts"
 			},
-			"./elements": {
-				"import": "./dist/elements.js",
-				"types": "./dist/elements/index.d.ts"
-			},
 			"./gateway/web": {
 				"import": "./dist/gateway/web.js",
 				"types": "./dist/gateway/web.d.ts"
 			},
-			"./gateway/node": {
-				"import": "./dist/gateway/node.js",
-				"types": "./dist/gateway/node.d.ts"
+			"./elements": {
+				"import": "./dist/elements.js",
+				"types": "./dist/elements/index.d.ts"
 			}
 		}
 	},

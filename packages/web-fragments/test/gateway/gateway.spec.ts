@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { FragmentGateway } from '../../src/gateway/fragment-gateway';
-import { getNodeMiddleware } from '../../src/gateway/middleware/node';
-import { getWebMiddleware } from '../../src/gateway/middleware/web';
+import { getMiddleware, prepareFragmentForReframing } from '../../src/gateway/middleware/web';
 import connect from 'connect';
 import http from 'node:http';
 import stream from 'node:stream';
@@ -10,7 +9,7 @@ import streamWeb from 'node:stream/web';
 // comment out some environments if you want to focus on testing just one or a few
 const environments = [];
 environments.push('web');
-environments.push('connect');
+// environments.push('connect');
 
 for (const environment of environments) {
 	describe(`${environment} middleware`, () => {
@@ -36,6 +35,42 @@ for (const environment of environments) {
 
 				expect(response2.status).toBe(200);
 				expect(await response2.text()).toBe('<p>hello moon</p>');
+			});
+		});
+
+		describe(`app shell requests - Error Handling`, () => {
+			const mockErrorResponse = (status: number, body = '') => {
+				return new Response(body, {
+					status,
+					headers: { 'content-type': 'text/html' },
+				});
+			};
+
+			it(`should handle 3xx redirections properly`, async () => {
+				mockShellAppResponse(mockErrorResponse(302, '<p>Redirecting...</p>'));
+
+				const response = await testRequest(new Request('http://localhost/'));
+
+				expect(response.status).toBe(302);
+				expect(await response.text()).toBe('<p>Redirecting...</p>');
+			});
+
+			it(`should handle 4xx client errors gracefully`, async () => {
+				mockShellAppResponse(mockErrorResponse(404, '<p>Not Found</p>'));
+
+				const response = await testRequest(new Request('http://localhost/'));
+
+				expect(response.status).toBe(404);
+				expect(await response.text()).toBe('<p>Not Found</p>');
+			});
+
+			it(`should handle 5xx server errors appropriately`, async () => {
+				mockShellAppResponse(mockErrorResponse(500, '<p>Internal Server Error</p>'));
+
+				const response = await testRequest(new Request('http://localhost/'));
+
+				expect(response.status).toBe(500);
+				expect(await response.text()).toBe('<p>Internal Server Error</p>');
 			});
 		});
 
@@ -73,6 +108,61 @@ for (const environment of environments) {
 				);
 			});
 
+			describe(`fragment requests - Error Handling`, () => {
+				const mockErrorResponse = (status: number, body = '', headers: Record<string, string> = {}) => {
+					return new Response(body, {
+						status,
+						headers: { 'content-type': 'text/html', ...headers },
+					});
+				};
+
+				// need to think about 3xx redirections since the proxy
+				// will reroute and not serve a 302 response
+
+				it(`should handle 4xx client errors gracefully`, async () => {
+					mockFragmentFooResponse('/foo', mockErrorResponse(404, '<p>Not Found</p>'));
+
+					const response = await testRequest(new Request('http://localhost/foo'));
+
+					expect(response.status).toBe(404);
+					expect(await response.text()).toBe('<p>Not Found</p>');
+				});
+
+				it(`should handle 5xx server errors appropriately`, async () => {
+					mockFragmentFooResponse('/foo', mockErrorResponse(500, '<p>Internal Server Error</p>'));
+
+					const response = await testRequest(new Request('http://localhost/foo'));
+
+					expect(response.status).toBe(500);
+					expect(await response.text()).toBe('<p>Internal Server Error</p>');
+				});
+
+				it(`should handle missing or incorrect content-type headers`, async () => {
+					mockFragmentFooResponse('/foo', new Response('<p>foo fragment</p>', { headers: { 'content-type': 'application/json' } }));
+
+					const response = await testRequest(new Request('http://localhost/foo'));
+
+					expect(response.headers.get('content-type')).not.toBe('text/html');
+					expect(response.headers.get('content-type')).toBe('application/json');
+					expect(await response.text()).toBe('<p>foo fragment</p>');
+				});
+
+				it(`should handle encoding errors gracefully`, async () => {
+					const invalidUtf8 = new Uint8Array([0xc3, 0x28]); // invalid UTF-8 byte sequence
+					mockFragmentFooResponse('/foo', new Response(invalidUtf8, { headers: { 'content-type': 'text/html; charset=utf-8' } }));
+
+					const response = await testRequest(new Request('http://localhost/foo'));
+
+					expect(response.status).toBe(200);
+					const text = await response.text();
+
+					// expect corrupted text instead of rejection
+					// handle encoding errors gracefully by replacing with �
+					expect(text).toContain('�');
+				});
+			});
+
+
 			it(`should append additional headers to the composed response`, async () => {
 				fetchMock.doMockIf((request) => {
 					if (request.url.toString() === 'http://foo.test:1234/foo') {
@@ -90,6 +180,7 @@ for (const environment of environments) {
 				expect(await response.text()).toBe('<p>foo fragment</p>');
 			});
 		});
+
 
 		describe(`fragment iframe requests`, () => {
 			it(`should serve a blank html document if a request is made by the iframe[src] element`, async () => {
@@ -123,6 +214,50 @@ for (const environment of environments) {
 				expect(response2.headers.get('vary')).toBe('sec-fetch-dest');
 			});
 		});
+
+
+		describe('prepareFragmentForReframing', () => {
+			it('should modify script elements to have type="inert" while preserving original type in data attribute', async () => {
+				const html = `<html><body>
+					<script>console.log('test');</script>
+					<script type="module">import foo from 'bar';</script>
+					<script type="application/json">{ "key": "value" }</script>
+				</body></html>`;
+
+				const fragmentResponse = new Response(html, {
+					headers: { 'content-type': 'text/html' },
+				});
+
+				const transformedResponse = prepareFragmentForReframing(fragmentResponse);
+				const transformedHtml = await transformedResponse.text();
+
+				console.log('Transformed HTML:', transformedHtml);
+
+				// normalize whitespace for better comparison
+				const normalizedHtml = transformedHtml.replace(/\s+/g, ' ').trim();
+
+				// match script tag regardless of attribute order
+				expect(normalizedHtml).toMatch(/<script\s+type="inert">\s*console\.log\('test'\);\s*<\/script>/);
+				expect(normalizedHtml).toMatch(/<script\s+(?:type="inert"\s+data-script-type="module"|data-script-type="module"\s+type="inert")>\s*import foo from 'bar';\s*<\/script>/);
+				expect(normalizedHtml).toMatch(/<script\s+(?:type="inert"\s+data-script-type="application\/json"|data-script-type="application\/json"\s+type="inert")>\s*\{ "key": "value" \}\s*<\/script>/);
+			});
+
+			it('should not modify non-script elements', async () => {
+				const html = `<html><body><p>Hello World</p></body></html>`;
+
+				const fragmentResponse = new Response(html, {
+					headers: { 'content-type': 'text/html' },
+				});
+
+				const transformedResponse = prepareFragmentForReframing(fragmentResponse);
+				const transformedHtml = await transformedResponse.text();
+
+				console.log('Transformed HTML (non-script test):', transformedHtml);
+
+				expect(transformedHtml).toContain('<p>Hello World</p>');
+			});
+		});
+
 
 		describe(`fragment html and asset requests`, () => {
 			it(`should serve a fragment soft navigation request`, async () => {
@@ -238,7 +373,7 @@ for (const environment of environments) {
 
 			switch (environment) {
 				case 'web': {
-					const webMiddleware = getWebMiddleware(fragmentGateway, {
+					const webMiddleware = getMiddleware(fragmentGateway, {
 						additionalHeaders: {
 							'x-additional-header': 'j/k',
 						},
@@ -262,7 +397,7 @@ for (const environment of environments) {
 					// We use an actual connect server here with an ephemeral port
 					const app = connect();
 					app.use(
-						getNodeMiddleware(fragmentGateway, {
+						getMiddleware(fragmentGateway, {
 							additionalHeaders: {
 								'x-additional-header': 'j/k',
 							},

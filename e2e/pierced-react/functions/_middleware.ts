@@ -1,6 +1,6 @@
 import { FragmentGateway } from 'web-fragments/gateway';
-import { getWebMiddleware } from 'web-fragments/gateway/web';
-import { PagesFunction } from '@cloudflare/workers-types';
+import { getMiddleware } from 'web-fragments/gateway/middleware';
+import { PagesFunction} from '@cloudflare/workers-types';
 
 // Initialize the FragmentGateway
 const gateway = new FragmentGateway({
@@ -40,7 +40,7 @@ gateway.registerFragment({
 	}),
 });
 
-const middleware = getWebMiddleware(gateway, { mode: 'development' });
+const middleware = getMiddleware(gateway, { mode: 'development' });
 
 // CF Pages specific handler
 export const onRequest: PagesFunction = async (context) => {
@@ -54,3 +54,22 @@ export const onRequest: PagesFunction = async (context) => {
 	)) as Response;
 	return response as unknown as import('@cloudflare/workers-types').Response;
 };
+
+
+
+// const handleRequest = async (
+// 	input: Request | EventContext<unknown, string, Record<string, unknown>>
+// ) => {
+// 	const request = input instanceof Request ? input : input.request;
+// 	const next = input instanceof Request ? () => fetch(request as Request) : input.next;
+
+// 	console.log('[Debug Info: Wrapper ]Incoming request', request.url);
+
+// 	// Run middleware
+// 	const response = (await middleware(request as Request, next as () => Promise<Response>)) as Response;
+// 	return response as unknown as import('@cloudflare/workers-types').Response;
+// };
+
+// // Correctly typed exports for both Cloudflare Pages and Workers
+// export const onRequest: PagesFunction = async (context) => handleRequest(context);
+// export const onFetch: ExportedHandlerFetchHandler = async (request) => handleRequest(request as unknown as Request);
