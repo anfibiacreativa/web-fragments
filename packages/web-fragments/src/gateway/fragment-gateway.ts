@@ -23,10 +23,18 @@ export interface FragmentConfig {
 	 */
 	prePiercingClassNames: string[];
 	/**
-	 * An array of route patterns this fragment should handle serving.
-	 * Pattern format must adhere to https://github.com/pillarjs/path-to-regexp#parameters syntax
+	@deprecated
 	 */
-	routePatterns: string[];
+	routePatterns?: string[];
+	/**
+	* The url to the upstream assets
+	*/
+	assetsURLPrefix: string[];
+	/**
+	 * The routes where this fragment exists at
+	 * in the application
+	 */
+	appRoutes: string[];
 	/**
 	 * The endpoint URI of the fragment application.
 	 * This will be fetched on any request paths matching the specified `routePatterns`
@@ -101,8 +109,8 @@ export class FragmentGateway {
 
 		// create a reverse mapping of route patterns to fragment configs
 		// used for lookup when finding a route match.
-		fragmentConfig.routePatterns.forEach((routePattern) => {
-			const matcher = match(routePattern, {
+		fragmentConfig.assetsURLPrefix.forEach((p) => {
+			const matcher = match(p, {
 				decode: globalThis.decodeURIComponent,
 			});
 
@@ -132,9 +140,9 @@ export class FragmentGateway {
  * @returns The gateway worker with the fragments registered.
  */
 export function registerWebFragments(fragment: FragmentConfig[], gateway: FragmentGateway) {
-	fragment.forEach((f) => {
-		validateFragmentConfig(f);
-		gateway.registerFragment(f);
+	fragment.forEach((fragment) => {
+		validateFragmentConfig(fragment);
+		gateway.registerFragment(fragment);
 	});
 	return gateway;
 }
@@ -145,17 +153,17 @@ export function registerWebFragments(fragment: FragmentConfig[], gateway: Fragme
  * @throws Error if the FragmentConfig is invalid
  * @returns void
  */
-function validateFragmentConfig(f: FragmentConfig) {
-	if (!f.fragmentId) {
+function validateFragmentConfig(config: FragmentConfig) {
+	if (!config.fragmentId) {
 		throw new Error('FragmentConfig must have a fragmentId.');
 	}
-	if (!Array.isArray(f.prePiercingClassNames)) {
+	if (!Array.isArray(config.prePiercingClassNames)) {
 		throw new Error('FragmentConfig must have an array of prePiercingClassNames.');
 	}
-	if (!Array.isArray(f.routePatterns) || f.routePatterns.length === 0) {
+	if (!Array.isArray(config.routePatterns) || config.routePatterns.length === 0) {
 		throw new Error('FragmentConfig must have at least one routePattern.');
 	}
-	if (!f.endpoint) {
+	if (!config.endpoint) {
 		throw new Error('FragmentConfig must have an endpoint.');
 	}
 }
