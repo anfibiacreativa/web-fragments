@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<title>reframed-node fragment</title>
+	</head>
+	<body>
+		<h2>reframed-events fragment</h2>
+		<ul>
+			<li>
+				<code>document fired "DOMContentLoaded"</code>
+				<input id="web-fragment-document-dcl" type="checkbox" />
+			</li>
+			<li>
+				<code>window fired "load"</code>
+				<input id="web-fragment-window-load" type="checkbox" />
+			</li>
+		</ul>
+		<script>
+			document.addEventListener('DOMContentLoaded', () => {
+				document.querySelector('#web-fragment-document-dcl').checked = true;
+			});
+			window.addEventListener('load', () => {
+				document.querySelector('#web-fragment-window-load').checked = true;
+			});
+		</script>
+		<!-- local images will likely load quickly and trigger the img.completed path -->
+		<img src="/reframed-events/logo.png" height="100" width="100" />
+		<img src="/reframed-events/logo.png?cachebust=1" height="100" width="100" />
+		<img src="/reframed-events/logo.png?cachebust=2" height="100" width="100" />
+		<!-- load external image which is more likely to load slowly and trigger the img.onload path -->
+		<img src="https://placehold.co/600x400" height="100" width="100" />
+	</body>
+</html>

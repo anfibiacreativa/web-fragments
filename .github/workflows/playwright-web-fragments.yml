@@ -3,9 +3,7 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'packages/**'
-      - '.github/workflows/playwright-web-fragments.yml'
+      - changeset-release/main
   pull_request:
     branches:
       - main

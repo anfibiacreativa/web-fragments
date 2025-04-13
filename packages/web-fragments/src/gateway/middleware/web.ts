@@ -20,7 +20,8 @@ export function getWebMiddleware(
 	const { additionalHeaders = {}, mode = 'development' }: FragmentMiddlewareOptions = options;
 
 	return async (request: Request, next: () => Promise<Response>): Promise<Response> => {
-		const matchedFragment = gateway.matchRequestToFragment(new URL(request.url).pathname);
+		const { pathname, search = '' } = new URL(request.url);
+		const matchedFragment = gateway.matchRequestToFragment(`${pathname}${search}`);
 
 		/**
 		 * Handle app shell (legacy app) requests
@@ -46,7 +47,12 @@ export function getWebMiddleware(
 		 */
 		if (requestSecFetchDest === 'iframe') {
 			return new Response('<!doctype html><title>', {
-				headers: { 'Content-Type': 'text/html', vary: 'sec-fetch-dest' },
+				headers: {
+					'Content-Type': 'text/html',
+					vary: 'sec-fetch-dest',
+					// cache the response for 1 hour and then revalidate in the background just in case we need to make some changes to the served content in the future
+					'Cache-Control': 'max-age=3600, public, stale-while-revalidate=31536000',
+				},
 			});
 		}
 
@@ -141,7 +147,7 @@ export function getWebMiddleware(
 			try {
 				onSsrFetchErrorResponse = await onSsrFetchError(request, fragmentResponseOrError);
 			} catch (error) {
-				console.error('onSsrFetchError failed! Using defaultOnSssrFetchError handler instead', { cause: error });
+				console.error('onSsrFetchError failed! Using defaultOnSsrFetchError handler instead', { cause: error });
 				onSsrFetchErrorResponse = await defaultOnSsrFetchError(request, fragmentResponseOrError);
 			}
 			const { response, overrideResponse } = onSsrFetchErrorResponse;
@@ -184,7 +190,14 @@ export function getWebMiddleware(
 	): Promise<Response> {
 		const { endpoint } = fragmentConfig;
 		const requestUrl = new URL(originalRequest.url);
-		const fragmentEndpoint = new URL(`${requestUrl.pathname}${requestUrl.search}`, endpoint);
+
+		// if the endpoint is a fetcher function we'll use it
+		// otherwise we'll use the endpoint as a URL and fetch it
+		const [fragmentReqUrl, fragmentFetch] =
+			typeof endpoint === 'function'
+				? [requestUrl, endpoint]
+				: [new URL(`${requestUrl.pathname}${requestUrl.search}`, endpoint), globalThis.fetch];
+
 		const fetchingToPierce = originalRequest.headers.get('sec-fetch-dest') === 'document';
 
 		// if we are about to pierce a fragment, drop headers that apply only to the overall document request
@@ -197,7 +210,7 @@ export function getWebMiddleware(
 		//const abortController = new AbortController();
 		//const timeoutTimer = abortIfSlow && setTimeout(() => abortController.abort(), 1_500);
 
-		const fragmentReq = new Request(fragmentEndpoint, originalRequest);
+		const fragmentReq = new Request(fragmentReqUrl, originalRequest);
 
 		// forward the original protocol and host info to the fragment endpoint
 		fragmentReq.headers.set(
@@ -226,7 +239,7 @@ export function getWebMiddleware(
 			fragmentReq.headers.set('Accept-Encoding', 'gzip');
 		}
 
-		return fetch(fragmentReq);
+		return fragmentFetch(fragmentReq);
 
 		// TODO: add timeout handling
 		// return fetch(fragmentReq, { signal: abortController.signal }).finally(
@@ -259,26 +272,11 @@ export function getWebMiddleware(
 		//
 		// Since the wasm HTMLRewriter doesn't have this feature yet, so we need to split the implementation into two for now.
 		if (isNativeHtmlRewriter) {
-			return new HTMLRewriter()
-				.on('head', {
-					element(element) {
-						element.append(gateway.piercingStyles ?? '', { html: true });
-					},
-				})
-				.on('body', {
-					async element(element) {
-						(element.append as any as (content: ReadableStream, options: { html: boolean }) => void)(
-							asReadableStream`
-								<web-fragment-host class="${piercingClassNames.join(' ')}" fragment-id="${fragmentId}" data-piercing="true">
-									<template shadowrootmode="open">${fragmentResponse.body ?? ''}</template>
-								</web-fragment-host>`,
-							{ html: true },
-						);
-					},
-				})
-				.transform(appShellResponse);
-		} else {
-			const fragmentContent = await fragmentResponse.text();
+			let fragmentPierced = false;
+			const fragmentStream = asReadableStream`
+			<web-fragment-host class="${piercingClassNames.join(' ')}" fragment-id="${fragmentId}" data-piercing="true">
+				<template shadowrootmode="open">${fragmentResponse.body ?? ''}</template>
+			</web-fragment-host>`;
 
 			return new HTMLRewriter()
 				.on('head', {
@@ -286,12 +284,59 @@ export function getWebMiddleware(
 						element.append(gateway.piercingStyles ?? '', { html: true });
 					},
 				})
-				.on('body', {
+				.on('web-fragment', {
 					element(element) {
+						if (element.getAttribute('fragment-id') !== fragmentId) return;
+
+						(element.append as any as (content: ReadableStream, options: { html: boolean }) => void)(fragmentStream, {
+							html: true,
+						});
+						fragmentPierced = true;
+					},
+				})
+				.on('body', {
+					async element(element) {
+						element.onEndTag((endTag) => {
+							if (fragmentPierced) return;
+
+							(endTag.before as any as (content: ReadableStream, options: { html: boolean }) => void)(fragmentStream, {
+								html: true,
+							});
+						});
+					},
+				})
+				.transform(appShellResponse);
+		} else {
+			const fragmentContent = await fragmentResponse.text();
+			let fragmentPierced = false;
+
+			return new HTMLRewriter()
+				.on('head', {
+					element(element) {
+						element.append(gateway.piercingStyles ?? '', { html: true });
+					},
+				})
+				.on('web-fragment', {
+					element(element) {
+						if (element.getAttribute('fragment-id') !== fragmentId) return;
+
 						element.append(
-							`<web-fragment-host class="${piercingClassNames.join(' ')}" fragment-id="${fragmentId}" data-piercing="true"><template shadowrootmode="open">${fragmentContent}</template></web-fragment-host>`,
+							`<template shadowrootmode="open"><web-fragment-host class="${piercingClassNames.join(' ')}" fragment-id="${fragmentId}" data-piercing="true"><template shadowrootmode="open">${fragmentContent}</template></web-fragment-host></template>`,
 							{ html: true },
 						);
+						fragmentPierced = true;
+					},
+				})
+				.on('body', {
+					element(element) {
+						element.onEndTag((endTag) => {
+							if (fragmentPierced) return;
+
+							endTag.before(
+								`<web-fragment-host class="${piercingClassNames.join(' ')}" fragment-id="${fragmentId}" data-piercing="true"><template shadowrootmode="open">${fragmentContent}</template></web-fragment-host>`,
+								{ html: true },
+							);
+						});
 					},
 				})
 				.transform(appShellResponse);
