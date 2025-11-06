@@ -58,21 +58,20 @@ The Service Worker middleware in `packages/web-fragments/src/gateway/middleware/
 const secFetchDest = request.headers.get('sec-fetch-dest');
 const headers = new Headers(request.headers);
 if (secFetchDest) {
-    headers.set('x-wf-fetch-dest', secFetchDest);
+	headers.set('x-wf-fetch-dest', secFetchDest);
 }
 
 // Create new Request with mode:'cors' (strips sec-fetch-dest but keeps x-wf-fetch-dest)
 const safeRequest = new Request(request.url, {
-    headers,
-    mode: 'cors'
+	headers,
+	mode: 'cors',
 });
 ```
 
 The web middleware (`web.ts`) then checks both headers to determine the effective fetch destination:
 
 ```typescript
-const effectiveFetchDest = request.headers.get('x-wf-fetch-dest')
-    || request.headers.get('sec-fetch-dest');
+const effectiveFetchDest = request.headers.get('x-wf-fetch-dest') || request.headers.get('sec-fetch-dest');
 ```
 
 This test file serves as living documentation proving that this workaround is necessary due to browser security policies.

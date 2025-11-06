@@ -1,150 +1,168 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test: Browser strips sec-fetch-dest in Service Worker</title>
-    <style>
-        body {
-            font-family: monospace;
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        h1 { font-size: 18px; }
-        h2 { font-size: 16px; margin-top: 20px; }
-        pre {
-            background: #f5f5f5;
-            padding: 10px;
-            border-radius: 4px;
-            overflow-x: auto;
-        }
-        .result {
-            margin: 10px 0;
-            padding: 10px;
-            border-left: 3px solid #333;
-        }
-        .pass { border-color: green; background: #e8f5e9; }
-        .fail { border-color: red; background: #ffebee; }
-        .usage {
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            padding: 15px;
-            margin: 20px 0;
-        }
-        .usage h3 {
-            margin-top: 0;
-            color: #1976d2;
-        }
-        .usage code {
-            background: #fff;
-            padding: 2px 6px;
-            border-radius: 3px;
-            color: #d32f2f;
-        }
-    </style>
-</head>
-<body>
-    <h1>Test: Browser strips sec-fetch-dest when creating Request with mode:'cors'</h1>
-    
-    <div class="usage">
-        <h3>📖 How to Use This Test</h3>
-        <p>
-            <strong>Purpose:</strong> This standalone HTML file demonstrates that browsers strip the <code>sec-fetch-dest</code> 
-            header when creating a new Request with <code>mode: 'cors'</code> in a Service Worker context.
-        </p>
-        <p>
-            <strong>How to Run:</strong>
-        </p>
-        <ol>
-            <li>Open this file directly in your browser (File → Open, or drag into browser window)</li>
-            <li>Tests run automatically on page load</li>
-            <li>Check console (F12) for detailed header inspection</li>
-            <li>Look for green boxes (✓ pass) and red boxes (✗ fail showing the issue)</li>
-        </ol>
-        <p>
-            <strong>What This Proves:</strong>
-        </p>
-        <ul>
-            <li><strong>Test 2:</strong> <code>mode: 'navigate'</code> throws TypeError (can't be used in Request constructor)</li>
-            <li><strong>Test 3:</strong> Creating Request with <code>mode: 'cors'</code> strips <code>sec-fetch-dest</code> ❌</li>
-            <li><strong>Test 4:</strong> Workaround using <code>x-wf-fetch-dest</code> custom header preserves the value ✅</li>
-        </ul>
-        <p>
-            <strong>Why This Matters:</strong> The Service Worker middleware in <code>service-worker.ts</code> needs to preserve 
-            <code>sec-fetch-dest</code> so that <code>web.ts</code> can detect iframe requests and return the appropriate 
-            stub document for the reframed pattern. This test validates that workaround is necessary.
-        </p>
-    </div>
-    
-    <h2>Test 1: Original navigation request (in main thread)</h2>
-    <div id="test1"></div>
-    
-    <h2>Test 2: Request with mode:'navigate' (throws TypeError)</h2>
-    <div id="test2"></div>
-    
-    <h2>Test 3: Request with mode:'cors' created from navigate request</h2>
-    <div id="test3"></div>
-    
-    <h2>Test 4: Simulated Service Worker context</h2>
-    <div id="test4"></div>
-    
-    <script>
-        // Test 1: Show headers on a real navigation request
-        const test1 = document.getElementById('test1');
-        test1.innerHTML = `
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Test: Browser strips sec-fetch-dest in Service Worker</title>
+		<style>
+			body {
+				font-family: monospace;
+				padding: 20px;
+				max-width: 800px;
+				margin: 0 auto;
+			}
+			h1 {
+				font-size: 18px;
+			}
+			h2 {
+				font-size: 16px;
+				margin-top: 20px;
+			}
+			pre {
+				background: #f5f5f5;
+				padding: 10px;
+				border-radius: 4px;
+				overflow-x: auto;
+			}
+			.result {
+				margin: 10px 0;
+				padding: 10px;
+				border-left: 3px solid #333;
+			}
+			.pass {
+				border-color: green;
+				background: #e8f5e9;
+			}
+			.fail {
+				border-color: red;
+				background: #ffebee;
+			}
+			.usage {
+				background: #e3f2fd;
+				border-left: 4px solid #2196f3;
+				padding: 15px;
+				margin: 20px 0;
+			}
+			.usage h3 {
+				margin-top: 0;
+				color: #1976d2;
+			}
+			.usage code {
+				background: #fff;
+				padding: 2px 6px;
+				border-radius: 3px;
+				color: #d32f2f;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Test: Browser strips sec-fetch-dest when creating Request with mode:'cors'</h1>
+
+		<div class="usage">
+			<h3>📖 How to Use This Test</h3>
+			<p>
+				<strong>Purpose:</strong> This standalone HTML file demonstrates that browsers strip the
+				<code>sec-fetch-dest</code> header when creating a new Request with <code>mode: 'cors'</code> in a Service
+				Worker context.
+			</p>
+			<p>
+				<strong>How to Run:</strong>
+			</p>
+			<ol>
+				<li>Open this file directly in your browser (File → Open, or drag into browser window)</li>
+				<li>Tests run automatically on page load</li>
+				<li>Check console (F12) for detailed header inspection</li>
+				<li>Look for green boxes (✓ pass) and red boxes (✗ fail showing the issue)</li>
+			</ol>
+			<p>
+				<strong>What This Proves:</strong>
+			</p>
+			<ul>
+				<li>
+					<strong>Test 2:</strong> <code>mode: 'navigate'</code> throws TypeError (can't be used in Request constructor)
+				</li>
+				<li>
+					<strong>Test 3:</strong> Creating Request with <code>mode: 'cors'</code> strips <code>sec-fetch-dest</code> ❌
+				</li>
+				<li>
+					<strong>Test 4:</strong> Workaround using <code>x-wf-fetch-dest</code> custom header preserves the value ✅
+				</li>
+			</ul>
+			<p>
+				<strong>Why This Matters:</strong> The Service Worker middleware in <code>service-worker.ts</code> needs to
+				preserve <code>sec-fetch-dest</code> so that <code>web.ts</code> can detect iframe requests and return the
+				appropriate stub document for the reframed pattern. This test validates that workaround is necessary.
+			</p>
+		</div>
+
+		<h2>Test 1: Original navigation request (in main thread)</h2>
+		<div id="test1"></div>
+
+		<h2>Test 2: Request with mode:'navigate' (throws TypeError)</h2>
+		<div id="test2"></div>
+
+		<h2>Test 3: Request with mode:'cors' created from navigate request</h2>
+		<div id="test3"></div>
+
+		<h2>Test 4: Simulated Service Worker context</h2>
+		<div id="test4"></div>
+
+		<script>
+			// Test 1: Show headers on a real navigation request
+			const test1 = document.getElementById('test1');
+			test1.innerHTML = `
             <div class="result">
                 <strong>Note:</strong> In a real navigation request, browsers set sec-fetch-dest automatically.<br>
                 Example: <code>sec-fetch-dest: document</code> for top-level navigation<br>
                 Example: <code>sec-fetch-dest: iframe</code> for iframe navigation
             </div>
         `;
-        
-        // Test 2: Try to create Request with mode:'navigate'
-        const test2 = document.getElementById('test2');
-        try {
-            const req = new Request('https://example.com', { mode: 'navigate' });
-            test2.innerHTML = `<div class="result fail">UNEXPECTED: Request with mode:'navigate' did not throw</div>`;
-        } catch (e) {
-            test2.innerHTML = `
+
+			// Test 2: Try to create Request with mode:'navigate'
+			const test2 = document.getElementById('test2');
+			try {
+				const req = new Request('https://example.com', { mode: 'navigate' });
+				test2.innerHTML = `<div class="result fail">UNEXPECTED: Request with mode:'navigate' did not throw</div>`;
+			} catch (e) {
+				test2.innerHTML = `
                 <div class="result pass">
                     <strong>✓ Expected:</strong> Request with mode:'navigate' throws TypeError<br>
                     <code>${e.message}</code>
                 </div>
             `;
-        }
-        
-        // Test 3: Demonstrate the sec-fetch-dest stripping issue
-        const test3 = document.getElementById('test3');
-        
-        // Note: We can't actually create a request with sec-fetch-dest in the main thread
-        // because browsers only add that header automatically on real navigations.
-        // But we can simulate what happens in a Service Worker when it receives a real navigation request.
-        
-        // Create a mock scenario: imagine this is what the SW receives in event.request
-        const mockNavigationRequestHeaders = {
-            'sec-fetch-dest': 'iframe',
-            'sec-fetch-mode': 'navigate',
-            'sec-fetch-site': 'same-origin',
-            'accept': 'text/html'
-        };
-        
-        console.log('Mock navigation request headers (what SW receives):', mockNavigationRequestHeaders);
-        
-        // SW receives a request with mode: 'navigate', but we can't construct one
-        // So let's show what happens when we try to copy headers to a new CORS request
-        const originalHeaders = new Headers(mockNavigationRequestHeaders);
-        
-        // Try to create a CORS request with those headers (simulates Service Worker behavior)
-        const corsRequest = new Request('https://example.com', {
-            headers: originalHeaders,
-            mode: 'cors' // This is what SW middleware does to handle navigate mode
-        });
-        
-        const originalHasDest = originalHeaders.has('sec-fetch-dest');
-        const corsHasDest = corsRequest.headers.has('sec-fetch-dest');
-        
-        test3.innerHTML = `
+			}
+
+			// Test 3: Demonstrate the sec-fetch-dest stripping issue
+			const test3 = document.getElementById('test3');
+
+			// Note: We can't actually create a request with sec-fetch-dest in the main thread
+			// because browsers only add that header automatically on real navigations.
+			// But we can simulate what happens in a Service Worker when it receives a real navigation request.
+
+			// Create a mock scenario: imagine this is what the SW receives in event.request
+			const mockNavigationRequestHeaders = {
+				'sec-fetch-dest': 'iframe',
+				'sec-fetch-mode': 'navigate',
+				'sec-fetch-site': 'same-origin',
+				accept: 'text/html',
+			};
+
+			console.log('Mock navigation request headers (what SW receives):', mockNavigationRequestHeaders);
+
+			// SW receives a request with mode: 'navigate', but we can't construct one
+			// So let's show what happens when we try to copy headers to a new CORS request
+			const originalHeaders = new Headers(mockNavigationRequestHeaders);
+
+			// Try to create a CORS request with those headers (simulates Service Worker behavior)
+			const corsRequest = new Request('https://example.com', {
+				headers: originalHeaders,
+				mode: 'cors', // This is what SW middleware does to handle navigate mode
+			});
+
+			const originalHasDest = originalHeaders.has('sec-fetch-dest');
+			const corsHasDest = corsRequest.headers.has('sec-fetch-dest');
+
+			test3.innerHTML = `
             <div class="result">
                 <strong>Mock Navigation Headers (what SW receives):</strong><br>
                 Has sec-fetch-dest: ${originalHasDest ? '✓' : '✗'} ${originalHasDest ? `(value: "${originalHeaders.get('sec-fetch-dest')}")` : ''}<br>
@@ -154,28 +172,28 @@
                 <strong>CORS Request (mode: '${corsRequest.mode}'):</strong><br>
                 Has sec-fetch-dest: ${corsHasDest ? '✓' : '✗ (STRIPPED BY BROWSER!)'}<br>
                 <pre>${JSON.stringify(Object.fromEntries(corsRequest.headers.entries()), null, 2)}</pre>
-                ${!corsHasDest ? '<strong>⚠️ Browser stripped sec-fetch-dest when creating Request with mode:\'cors\'</strong>' : ''}
+                ${!corsHasDest ? "<strong>⚠️ Browser stripped sec-fetch-dest when creating Request with mode:'cors'</strong>" : ''}
             </div>
         `;
-        
-        // Test 4: Show the workaround
-        const test4 = document.getElementById('test4');
-        
-        const secFetchDest = originalHeaders.get('sec-fetch-dest');
-        const workaroundHeaders = new Headers(mockNavigationRequestHeaders);
-        if (secFetchDest) {
-            workaroundHeaders.set('x-wf-fetch-dest', secFetchDest);
-        }
-        
-        const workaroundRequest = new Request('https://example.com', {
-            headers: workaroundHeaders,
-            mode: 'cors'
-        });
-        
-        const hasOriginal = workaroundRequest.headers.has('sec-fetch-dest');
-        const hasWorkaround = workaroundRequest.headers.has('x-wf-fetch-dest');
-        
-        test4.innerHTML = `
+
+			// Test 4: Show the workaround
+			const test4 = document.getElementById('test4');
+
+			const secFetchDest = originalHeaders.get('sec-fetch-dest');
+			const workaroundHeaders = new Headers(mockNavigationRequestHeaders);
+			if (secFetchDest) {
+				workaroundHeaders.set('x-wf-fetch-dest', secFetchDest);
+			}
+
+			const workaroundRequest = new Request('https://example.com', {
+				headers: workaroundHeaders,
+				mode: 'cors',
+			});
+
+			const hasOriginal = workaroundRequest.headers.has('sec-fetch-dest');
+			const hasWorkaround = workaroundRequest.headers.has('x-wf-fetch-dest');
+
+			test4.innerHTML = `
             <div class="result ${hasWorkaround ? 'pass' : 'fail'}">
                 <strong>Workaround: Preserve in custom header</strong><br>
                 Has sec-fetch-dest: ${hasOriginal ? '✓' : '✗'}<br>
@@ -184,11 +202,11 @@
                 ${hasWorkaround ? '<strong>✓ Custom header x-wf-fetch-dest preserves the original value</strong>' : ''}
             </div>
         `;
-        
-        console.log('\n=== Test Summary ===');
-        console.log('1. Original request with sec-fetch-dest:', originalHasDest);
-        console.log('2. CORS request (sec-fetch-dest stripped):', corsHasDest);
-        console.log('3. Workaround with x-wf-fetch-dest:', hasWorkaround);
-    </script>
-</body>
+
+			console.log('\n=== Test Summary ===');
+			console.log('1. Original request with sec-fetch-dest:', originalHasDest);
+			console.log('2. CORS request (sec-fetch-dest stripped):', corsHasDest);
+			console.log('3. Workaround with x-wf-fetch-dest:', hasWorkaround);
+		</script>
+	</body>
 </html>
