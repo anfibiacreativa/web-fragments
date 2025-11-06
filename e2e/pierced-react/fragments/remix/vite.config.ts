@@ -8,6 +8,9 @@ export default defineConfig({
 		minify: false,
 		assetsDir: '_fragment/remix/assets',
 	},
+	server: {
+		cors: true,
+	},
 	plugins: [
 		remix({
 			future: {

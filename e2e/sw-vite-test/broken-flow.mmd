@@ -1,0 +1,52 @@
+sequenceDiagram
+    autonumber
+    participant Browser
+    participant SW as Service Worker
+    participant CDN as CDN Server<br/>(port 4182)
+    participant Remix as Remix Fragment<br/>(port 5174)
+    
+    Note over Browser,Remix: WHAT'S ACTUALLY HAPPENING
+    
+    Browser->>+SW: GET /remix-page
+    Note right of Browser: Headers:<br/>sec-fetch-dest: document<br/>mode: navigate
+    
+    SW->>SW: Match route ✓
+    SW->>SW: Create SW-safe request ✓
+    Note right of SW: x-wf-fetch-dest: document ✓<br/>mode: cors ✓<br/>credentials: same-origin ✓
+    
+    rect rgb(255, 200, 200)
+        Note over SW,Remix: BROKEN: Shell fetch or embedding fails
+        
+        alt Shell fetch succeeds?
+            SW->>+CDN: GET /remix-page.html
+            CDN-->>-SW: HTML Shell
+        else Shell fetch fails?
+            SW->>CDN: GET /remix-page.html
+            CDN-->>SW: 404 or error
+        end
+        
+        SW->>+Remix: GET /remix-page
+        Note right of SW: Headers look correct ✓
+        Remix-->>-SW: Fragment HTML
+        Note left of Remix: Returns embedded HTML ✓
+        
+        critical HTMLRewriter should run
+            SW->>SW: embedFragmentIntoShellApp()
+        option Error in embedding
+            SW->>SW: Error thrown?
+        option Wrong code path
+            SW->>SW: Skipped embedding flow?
+        option Response type mismatch
+            SW->>SW: HTMLRewriter not triggered?
+        end
+    end
+    
+    SW-->>-Browser: Raw Fragment HTML ❌
+    Note left of SW: NOT COMBINED!<br/>Missing shell structure<br/>No shadow DOM
+    
+    Browser->>Browser: Render fragment only
+    Note right of Browser: Shows only fragment<br/>No shell<br/>No embedding
+    
+    rect rgb(255, 200, 200)
+        Note over Browser: USER SEES:<br/>Fragment content only<br/>Missing shell structure<br/>No web-fragment-host elements
+    end
