@@ -32,9 +32,10 @@ export function getServiceWorkerMiddleware(
 	// Wrap to create a service worker-safe request
 	// otherwise this needs to be recreated in user-land every time
 	return async (request: Request, next: () => Promise<Response>): Promise<Response> => {
-		// Clone the request with properties that the Request() constructor accepts in workers; see
-		// https://developer.mozilla.org/docs/Web/API/Request/Request for the mode/redirect coercions
-		// (e.g. mode 'navigate' throws, redirect 'manual' downgrades to 'follow').
+		// Clone the request with properties that the Request() constructor accepts in Service Workers.
+		// The 'navigate' mode cannot be used when constructing a Request in a worker context, so we use 'cors' instead.
+		// See: https://fetch.spec.whatwg.org/#request (step 17: "If mode is 'navigate', then throw a TypeError")
+		// Also: https://developer.mozilla.org/docs/Web/API/Request/Request
 
 		// Determine the proper mode: use 'cors' for navigate mode
 		const safeMode = request.mode === 'navigate' ? 'cors' : request.mode;
@@ -42,6 +43,7 @@ export function getServiceWorkerMiddleware(
 		// TODO: SW-WORKAROUND - Browser strips sec-fetch-dest when creating Request with mode:'cors' in SW context.
 		// Preserve original sec-fetch-dest in custom header x-wf-fetch-dest so web.ts can detect iframe requests.
 		// This enables the reframed stub document pattern to work in Service Workers.
+		// See test demonstration: e2e/sw-vite-test/test-sec-fetch-dest.html
 		const secFetchDest = request.headers.get('sec-fetch-dest');
 		const headers = new Headers(request.headers);
 		if (secFetchDest) {
