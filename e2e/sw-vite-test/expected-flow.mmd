@@ -1,0 +1,53 @@
+sequenceDiagram
+    autonumber
+    participant Browser
+    participant SW as Service Worker
+    participant CDN as CDN Server<br/>(port 4182)
+    participant Remix as Remix Fragment<br/>(port 5174)
+    
+    Note over Browser,Remix: INITIAL NAVIGATION TO /remix-page
+    
+    Browser->>+SW: GET /remix-page
+    Note right of Browser: Headers:<br/>sec-fetch-dest: document<br/>mode: navigate<br/>credentials: include
+    
+    SW->>SW: Match route → Remix fragment
+    Note right of SW: Preserve sec-fetch-dest<br/>in x-wf-fetch-dest
+    
+    SW->>SW: Create SW-safe request
+    Note right of SW: mode: cors (from navigate)<br/>credentials: same-origin<br/>redirect: follow<br/>x-wf-fetch-dest: document
+    
+    SW->>+CDN: GET /remix-page.html
+    Note right of SW: Headers:<br/>X-Service-Worker-Bypass: true
+    CDN-->>-SW: HTML Shell
+    Note left of CDN: Contains web-fragment-host placeholders
+    
+    SW->>SW: Web Middleware Processing
+    Note right of SW: effectiveFetchDest = 'document'<br/>piercing = true<br/>→ Enter piercing flow
+    
+    SW->>+Remix: GET /remix-page
+    Note right of SW: Headers:<br/>x-fragment-mode: embedded<br/>sec-fetch-dest: empty<br/>x-forwarded-host: localhost:4182
+    Remix-->>-SW: Fragment HTML
+    Note left of Remix: Embedded fragment<br/>(not full page)
+    
+    SW->>SW: HTMLRewriter.transform()
+    Note right of SW: Embed fragment into web-fragment-host<br/>Create shadow DOM
+    
+    SW-->>-Browser: Combined HTML
+    Note left of SW: Shell + Fragment<br/>in shadow roots
+    
+    Browser->>Browser: Render page
+    Note right of Browser: Fragment content<br/>in shadow DOM<br/>Isolated execution
+    
+    Note over Browser,Remix: REFRAMED IFRAME REQUEST
+    
+    Browser->>+SW: GET /remix-page (from iframe)
+    Note right of Browser: Headers:<br/>sec-fetch-dest: iframe
+    
+    SW->>SW: effectiveFetchDest = 'iframe'
+    Note right of SW: Preserved via<br/>x-wf-fetch-dest
+    
+    SW-->>-Browser: Stub document
+    Note left of SW: Minimal HTML stub for iframe
+    
+    Browser->>Browser: iframe execution context
+    Note right of Browser: Minimal document<br/>for isolation

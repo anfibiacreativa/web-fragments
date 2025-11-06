@@ -1,0 +1,59 @@
+sequenceDiagram
+    autonumber
+    participant Browser
+    participant SW as Service Worker<br/>(service-worker.ts)
+    participant Web as Web Middleware<br/>(web.ts)
+    participant Fragment as Fragment Server
+    
+    Note over Browser,Fragment: HEADER TRANSFORMATION CHAIN
+    
+    Browser->>SW: Request
+    Note right of Browser: ORIGINAL HEADERS:<br/>sec-fetch-dest: document<br/>mode: navigate<br/>credentials: include<br/>redirect: manual
+    
+    rect rgb(200, 230, 255)
+        Note over SW: service-worker.ts lines 44-65
+        SW->>SW: const secFetchDest = request.headers.get('sec-fetch-dest')
+        SW->>SW: headers.set('x-wf-fetch-dest', 'document')
+        SW->>SW: Create new Request()
+        Note right of SW: BROWSER SECURITY:<br/>Creating Request with mode:'cors'<br/>STRIPS sec-fetch-dest!<br/>That's why we preserve it in<br/>x-wf-fetch-dest
+    end
+    
+    SW->>Web: Modified Request
+    Note right of SW: MODIFIED HEADERS:<br/>sec-fetch-dest: (stripped!)<br/>x-wf-fetch-dest: document ← preserved!<br/>mode: cors ← changed<br/>credentials: same-origin ← changed<br/>redirect: follow ← changed
+    
+    rect rgb(200, 255, 200)
+        Note over Web: web.ts lines 53-58
+        Web->>Web: requestSecFetchDest = null
+        Web->>Web: xwfFetchDest = 'document'
+        Web->>Web: effectiveFetchDest = 'document' ✓
+        
+        Note over Web: web.ts line 58
+        Web->>Web: if (effectiveFetchDest === 'iframe')<br/>→ NO, skip stub
+        
+        Note over Web: web.ts line 80
+        Web->>Web: if (piercing || effectiveFetchDest !== 'document')<br/>→ YES, fetch fragment
+        
+        Note over Web: web.ts line 86
+        Web->>Web: if (effectiveFetchDest === 'document')<br/>→ YES, should enter piercing flow!
+    end
+    
+    rect rgb(255, 255, 200)
+        Note over Web: web.ts fetchFragment (lines 223-285)
+        Web->>Web: Create fragment request
+        Web->>Web: headers.set('sec-fetch-dest', 'empty')
+        Web->>Web: headers.set('x-fragment-mode', 'embedded')
+        Web->>Web: headers.set('x-forwarded-host', 'localhost:4182')
+    end
+    
+    Web->>Fragment: Fragment Request
+    Note right of Web: FRAGMENT REQUEST HEADERS:<br/>sec-fetch-dest: empty ← overridden<br/>x-fragment-mode: embedded ← added<br/>x-forwarded-host: localhost:4182 ← added<br/>x-forwarded-proto: http ← added
+    
+    Fragment->>Fragment: Detect embedded mode
+    Note right of Fragment: Checks x-fragment-mode<br/>Returns partial HTML<br/>Not full page
+    
+    Fragment-->>Web: Fragment Response
+    Note left of Fragment: EXPECTED:<br/>content-type: text/html<br/>Body: embedded HTML
+    
+    rect rgb(255, 200, 200)
+        Note over Web: FAILURE POINT?<br/>HTMLRewriter should run here<br/>but may not be executing
+    end
