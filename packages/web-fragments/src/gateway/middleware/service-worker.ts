@@ -5,7 +5,7 @@
  */
 
 import { FragmentGateway, FragmentMiddlewareOptions } from '../fragment-gateway';
-import { getWebMiddleware } from './web';
+import { getWebMiddlewareForSW } from './web-for-sw';
 
 /**
  * Minimal type definition for Service Worker FetchEvent to avoid requiring WebWorker lib.
@@ -27,7 +27,7 @@ export function getServiceWorkerMiddleware(
 	options: FragmentMiddlewareOptions = {},
 ): (request: Request, next: () => Promise<Response>) => Promise<Response> {
 	// Get the web middleware with service worker flag
-	const webMiddleware = getWebMiddleware(gateway, { ...options, isServiceWorker: true });
+	const webMiddleware = getWebMiddlewareForSW(gateway, options);
 
 	// Wrap to create a service worker-safe request
 	// otherwise this needs to be recreated in user-land every time
@@ -46,11 +46,26 @@ export function getServiceWorkerMiddleware(
 		// See test demonstration: e2e/sw-vite-test/test-sec-fetch-dest.html
 		const secFetchDest = request.headers.get('sec-fetch-dest');
 		const headers = new Headers(request.headers);
-		if (secFetchDest) {
-			headers.set('x-wf-fetch-dest', secFetchDest);
-			console.log('[SW Middleware] Preserving sec-fetch-dest:', secFetchDest, 'in x-wf-fetch-dest');
+		
+		// Fallback: When sec-fetch-dest is not available (e.g., SW-controlled navigations),
+		// infer the destination from request.mode and request.destination
+		let effectiveDestination = secFetchDest;
+		if (!effectiveDestination) {
+			// Prioritize explicit iframe destination first
+			// (both iframe and document navigations have mode='navigate', so check destination first)
+			if (request.destination === 'iframe') {
+				effectiveDestination = 'iframe';
+				console.log('[SW Middleware] Inferred destination from request.destination=iframe:', effectiveDestination);
+			} else if (request.mode === 'navigate') {
+				// Fallback: top-level document navigation
+				effectiveDestination = 'document';
+				console.log('[SW Middleware] Inferred destination from mode=navigate:', effectiveDestination);
+			}
+		}		if (effectiveDestination) {
+			headers.set('x-wf-fetch-dest', effectiveDestination);
+			console.log('[SW Middleware] Preserving effective destination:', effectiveDestination, 'in x-wf-fetch-dest');
 		} else {
-			console.log('[SW Middleware] No sec-fetch-dest header found on original request');
+			console.log('[SW Middleware] No sec-fetch-dest or navigational context found');
 		}
 
 		// TODO: SW-WORKAROUND - Use same-origin credentials to avoid CORS issues with wildcard headers

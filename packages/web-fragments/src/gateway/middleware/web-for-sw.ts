@@ -1,5 +1,6 @@
 /**
- * The middleware provides support for Web request-response handling using fetch-like behavior, and for Node.js native http request and responses object, including using Connect framework, via the imported adaptor.
+ * Service Worker optimized middleware for Web request-response handling.
+ * This is a specialized version of web.ts with SW-specific fixes for response cloning and headers.
  */
 
 import { FragmentGateway, FragmentMiddlewareOptions, FragmentConfig, FragmentGatewayConfig } from '../fragment-gateway';
@@ -8,12 +9,12 @@ import { HTMLRewriter } from 'htmlrewriter';
 const isNativeHtmlRewriter = HTMLRewriter.toString().endsWith('{ [native code] }');
 
 /**
- * Creates middleware for handling web-based fragment rendering.
+ * Creates middleware for handling web-based fragment rendering in Service Worker context.
  * @param {FragmentGateway} gateway - The fragment gateway instance.
  * @param {FragmentMiddlewareOptions} [options={}] - Optional middleware settings.
  * @returns {Function} - A middleware function for processing web requests.
  */
-export function getWebMiddleware(
+export function getWebMiddlewareForSW(
 	gateway: FragmentGateway,
 	options: FragmentMiddlewareOptions = {},
 ): (request: Request, next: () => Promise<Response>) => Promise<Response> {
@@ -31,11 +32,17 @@ export function getWebMiddleware(
 		 * If this request doesn't match any fragment routes, then send it to the legacy app by calling the next() middleware function.
 		 */
 		if (!matchedFragment) {
-			// Fetch the app shell response from the origin and clone it so we can modify it
+			// SW FIX: Use .clone() for proper response duplication
 			const originalNextResponse = await next();
-			const appShellResponse = new Response(originalNextResponse.body, originalNextResponse);
-			appShellResponse.headers.append('x-web-fragment-id', '<app-shell>');
-			return appShellResponse;
+			const appShellResponse = originalNextResponse.clone();
+			// SW FIX: Create new Headers object (cloned response headers are immutable)
+			const headers = new Headers(appShellResponse.headers);
+			headers.append('x-web-fragment-id', '<app-shell>');
+			return new Response(appShellResponse.body, { 
+				status: appShellResponse.status, 
+				statusText: appShellResponse.statusText, 
+				headers 
+			});
 		}
 
 		const requestSecFetchDest = request.headers.get('sec-fetch-dest');
@@ -50,7 +57,23 @@ export function getWebMiddleware(
 		 *
 		 * However, we don't want the iframe's document to actually contain the fragment's content; we're only using it as an isolated execution context. Returning a stub document here is our workaround to that problem.
 		 */
-		if (requestSecFetchDest === 'iframe') {
+		// SW-WORKAROUND - In Service Workers, creating a new Request with mode:'cors' strips sec-fetch-dest header.
+		// As a temporary workaround, the SW wrapper sets x-wf-fetch-dest to preserve the original destination.
+		const xwfFetchDest = request.headers.get('x-wf-fetch-dest');
+		const effectiveFetchDest = requestSecFetchDest || xwfFetchDest;
+
+		console.log(
+			'[Web Middleware] Fragment:',
+			matchedFragment.fragmentId,
+			'sec-fetch-dest:',
+			requestSecFetchDest,
+			'x-wf-fetch-dest:',
+			xwfFetchDest,
+			'effective:',
+			effectiveFetchDest,
+		);
+
+		if (effectiveFetchDest === 'iframe') {
 			// The title below is used be reframed to detect gateway misconfiguration. See reframed.ts
 			return new Response('<!doctype html><title>Web Fragments: reframed', {
 				// !!! Important: the header name must be Camel-Cased for overriding via the iframesHeaders to work !!!
@@ -68,9 +91,9 @@ export function getWebMiddleware(
 		// Forward the request to the fragment endpoint
 		const fragmentResponsePromise =
 			// but only if we are about to pierce, or are proxying the request to the fragment endpoint
-			matchedFragment.piercing || requestSecFetchDest !== 'document'
+			matchedFragment.piercing || effectiveFetchDest !== 'document'
 				? fetchFragment(request, matchedFragment, additionalHeaders, mode)
-				: undefined; //Promise.reject('Unexpected fragment request');
+				: undefined;
 
 		/**
 		 * Handle SSR request from a hard navigation
@@ -78,23 +101,46 @@ export function getWebMiddleware(
 		 *
 		 * For hard navigations we need to combine the appShell response with fragment response.
 		 */
-		if (requestSecFetchDest === 'document') {
-			// Fetch the app shell response from the origin and clone it so we can modify it
+		if (effectiveFetchDest === 'document') {
+			console.log('[Web] PIERCING FLOW ENTERED - effectiveFetchDest=document, piercing:', matchedFragment.piercing);
+			// Fetch the app shell response from the origin
+			console.log('[Web] Fetching shell HTML via next()');
 			const originalNextResponse = await next();
-			const appShellResponse = new Response(originalNextResponse.body, originalNextResponse);
+			console.log('[Web] Shell response received:', originalNextResponse.status, originalNextResponse.ok);
+			// SW FIX: Use .clone() for proper response duplication
+			const appShellResponse = originalNextResponse.clone();
 
 			const isHTMLResponse = appShellResponse.headers.get('content-type')?.startsWith('text/html');
+			console.log(
+				'[Web] Shell validation - ok:',
+				appShellResponse.ok,
+				'isHTML:',
+				isHTMLResponse,
+				'piercing:',
+				matchedFragment.piercing,
+			);
 
 			// If the app shell response is an error or not HTML or we are not piercing, pass it through to the client
 			if (!appShellResponse.ok || !isHTMLResponse || !matchedFragment.piercing) {
-				appShellResponse.headers.append('vary', 'sec-fetch-dest');
-				appShellResponse.headers.append('x-web-fragment-id', '<app-shell>');
-				return appShellResponse;
+				console.log('[Web] EARLY RETURN - Shell validation failed or not piercing');
+				// SW FIX: Create new Headers object (cloned response headers are immutable)
+				const headers = new Headers(appShellResponse.headers);
+				headers.append('vary', 'sec-fetch-dest');
+				headers.append('x-web-fragment-id', '<app-shell>');
+				return new Response(appShellResponse.body, { status: appShellResponse.status, statusText: appShellResponse.statusText, headers });
 			}
 
 			// Combine the html responses from the fragment and app shell
+			console.log('[Web] About to combine shell and fragment responses');
 			return fragmentResponsePromise!
 				.then(function rejectErrorResponses(response: Response) {
+					console.log(
+						'[Web] Fragment response received:',
+						response.status,
+						response.ok,
+						'content-type:',
+						response.headers.get('content-type'),
+					);
 					if (response.ok) return response;
 					throw response;
 				})
@@ -102,22 +148,28 @@ export function getWebMiddleware(
 				.then(stripDoctype)
 				.then(prefixHtmlHeadBody)
 				.then(neutralizeScriptAndLinkTags)
-				.then((fragmentResponse) =>
-					embedFragmentIntoShellApp({
+				.then((fragmentResponse) => {
+					console.log('[Web] Calling embedFragmentIntoShellApp with fragment:', matchedFragment.fragmentId);
+					return embedFragmentIntoShellApp({
 						appShellResponse,
 						fragmentResponse,
 						fragmentConfig: matchedFragment,
 						gateway: gateway,
-					}),
-				)
-				.then((combinedResponse) => {
-					// Append Vary header to prevent BFCache issues
-					combinedResponse.headers.append('vary', 'sec-fetch-dest');
-					// Append X-Web-Fragment-Id for debugging purposes
-					combinedResponse.headers.append('x-web-fragment-id', matchedFragment.fragmentId);
-					return attachForwardedHeaders(Promise.resolve(combinedResponse), matchedFragment)(combinedResponse);
+					});
 				})
-				.catch(renderErrorResponse);
+				.then((combinedResponse) => {
+					console.log('[Web] Combined response created successfully');
+					// SW FIX: Create new Headers object (cloned response headers are immutable)
+					const headers = new Headers(combinedResponse.headers);
+					headers.append('vary', 'sec-fetch-dest');
+					headers.append('x-web-fragment-id', matchedFragment.fragmentId);
+					const responseWithHeaders = new Response(combinedResponse.body, { status: combinedResponse.status, statusText: combinedResponse.statusText, headers });
+					return attachForwardedHeaders(Promise.resolve(responseWithHeaders), matchedFragment)(responseWithHeaders);
+				})
+				.catch((error) => {
+					console.error('[Web] ERROR in piercing flow:', error);
+					return renderErrorResponse(error);
+				});
 		}
 
 		const fragmentResponse = await fragmentResponsePromise!;
@@ -129,9 +181,11 @@ export function getWebMiddleware(
 		 * Simply pass through the fragment response but append the vary header to prevent BFCache issues.
 		 */
 		if (requestSecFetchDest === 'empty') {
-			const fragmentSoftNavResponse = new Response(fragmentResponse.body, fragmentResponse);
-			fragmentSoftNavResponse.headers.append('vary', 'sec-fetch-dest');
-			fragmentSoftNavResponse.headers.append('x-web-fragment-id', matchedFragment.fragmentId);
+			// SW FIX: Create new Headers object (cloned response headers are immutable)
+			const headers = new Headers(fragmentResponse.headers);
+			headers.append('vary', 'sec-fetch-dest');
+			headers.append('x-web-fragment-id', matchedFragment.fragmentId);
+			const fragmentSoftNavResponse = new Response(fragmentResponse.body, { status: fragmentResponse.status, statusText: fragmentResponse.statusText, headers });
 
 			return prefixHtmlHeadBody(fragmentSoftNavResponse);
 		}
@@ -142,18 +196,16 @@ export function getWebMiddleware(
 		 *
 		 * Simply pass through the fragment response.
 		 */
-		const fragmentAssetResponse = new Response(fragmentResponse.body, fragmentResponse);
-		fragmentAssetResponse.headers.append('x-web-fragment-id', matchedFragment.fragmentId);
+		// SW FIX: Create new Headers object (cloned response headers are immutable)
+		const assetHeaders = new Headers(fragmentResponse.headers);
+		assetHeaders.append('x-web-fragment-id', matchedFragment.fragmentId);
+		const fragmentAssetResponse = new Response(fragmentResponse.body, { status: fragmentResponse.status, statusText: fragmentResponse.statusText, headers: assetHeaders });
 
 		if (mode === 'development' && ['gzip', 'br'].includes(fragmentAssetResponse.headers.get('content-encoding')!)) {
 			// Due to a bug in miniflare which doesn't pass through compressed responses correctly,
 			// we need to set the content-encoding to identity in development mode which somehow makes
 			// miniflare pass this responses via chunked encoding which prevents the content-length from being
 			// mismatched and the response being cut off abruptly.
-			//  https://github.com/cloudflare/workers-sdk/issues/6577
-			//  https://github.com/cloudflare/workers-sdk/issues/8004
-			//  https://github.com/opennextjs/opennextjs-aws/pull/718/files#diff-1102925bd511dd8915dbfd18689c1a3351c17ceef436f0027a3caa0548edbc74R56-R61
-			//  https://github.com/wakujs/waku/issues/1237
 			fragmentAssetResponse.headers.set('Content-Encoding', 'identity');
 		}
 
@@ -238,10 +290,6 @@ export function getWebMiddleware(
 			fragmentReq.headers.delete('if-modified-since');
 		}
 
-		// TODO: add timeout handling
-		//const abortController = new AbortController();
-		//const timeoutTimer = abortIfSlow && setTimeout(() => abortController.abort(), 1_500);
-
 		// forward the original protocol and host info to the fragment endpoint
 		fragmentReq.headers.set(
 			'x-forwarded-proto',
@@ -264,20 +312,12 @@ export function getWebMiddleware(
 
 		if (mode === 'development' && fragmentReq.headers.get('accept-encoding')?.includes('zstd')) {
 			// zstd is not currently supported during local development (with miniflare)
-			// https://github.com/cloudflare/workers-sdk/issues/9522
 			// so we set the accept-encoding to gzip and brotli
 			fragmentReq.headers.set('Accept-Encoding', 'gzip, br');
 		}
 
-		// make the request and ensure we don't follow redirects
-		// redirects should be sent all the way to the client, which can then decide to follow them or not
-		// this ensures that window.location is updated in the reframed iframe if the fragment returns a redirect
-		return fragmentFetch(fragmentReq, { redirect: 'manual' });
-
-		// TODO: add timeout handling
-		// return fetch(fragmentReq, { signal: abortController.signal }).finally(
-		// 	() => timeoutTimer && clearTimeout(timeoutTimer),
-		// );
+		// SW FIX: Use 'follow' redirect mode (manual not allowed with cors mode in SW)
+		return fragmentFetch(fragmentReq, { redirect: 'follow' });
 	}
 
 	/**
@@ -298,11 +338,25 @@ export function getWebMiddleware(
 		gateway: FragmentGatewayConfig;
 	}) {
 		const { fragmentId, piercingClassNames = [] } = fragmentConfig;
+		
+		console.log('[Web] embedFragmentIntoShellApp entered - fragmentId:', fragmentId);
+		console.log('[Web] appShellResponse ok/status/content-type:', appShellResponse.ok, appShellResponse.status, appShellResponse.headers.get('content-type'));
+		console.log('[Web] fragmentResponse ok/status/content-type:', fragmentResponse.ok, fragmentResponse.status, fragmentResponse.headers.get('content-type'));
+		
+		if (typeof (globalThis as any).HTMLRewriter === 'undefined') {
+			console.warn('[Web] HTMLRewriter is not available in this runtime. Aborting embedding.');
+			return appShellResponse;
+		}
+		
+		const shellText = await appShellResponse.clone().text();
+		const fragText = await fragmentResponse.clone().text();
+		console.log('[Web] shell length:', shellText.length);
+		console.log('[Web] fragment length:', fragText.length);
+		console.log('[Web] shell first 200 chars:', shellText.slice(0, 200).replace(/\n/g, ' '));
+		console.log('[Web] fragment first 200 chars:', fragText.slice(0, 200).replace(/\n/g, ' '));
 
 		// Native HTMLRewriter now supports appending/merging of streams directly, so we don't need to block the rewriting
 		// until we have the full fragment content. This improves performance.
-		// See: https://github.com/web-fragments/web-fragments/pull/104
-		//
 		// Since the wasm HTMLRewriter doesn't have this feature yet, so we need to split the implementation into two for now.
 		if (isNativeHtmlRewriter) {
 			let fragmentPierced = false;
@@ -319,6 +373,7 @@ export function getWebMiddleware(
 				})
 				.on('web-fragment', {
 					element(element) {
+						console.log('[Web] HTMLRewriter matched <web-fragment> element with fragment-id:', element.getAttribute('fragment-id'));
 						if (element.getAttribute('fragment-id') !== fragmentId) return;
 						element.append('<template shadowrootmode="open">', { html: true });
 
@@ -353,8 +408,10 @@ export function getWebMiddleware(
 				})
 				.on('web-fragment', {
 					element(element) {
+						console.log('[Web] HTMLRewriter (polyfill) matched <web-fragment> element with fragment-id:', element.getAttribute('fragment-id'));
 						if (element.getAttribute('fragment-id') !== fragmentId) return;
 
+						console.log('[Web] Embedding fragment content (length:', fragmentContent.length, ')');
 						element.append(
 							`<template shadowrootmode="open"><web-fragment-host class="${piercingClassNames.join(' ')}" fragment-id="${fragmentId}" data-piercing="true"><template shadowrootmode="open"><wf-document>${fragmentContent}</wf-document></template></web-fragment-host></template>`,
 							{ html: true },
