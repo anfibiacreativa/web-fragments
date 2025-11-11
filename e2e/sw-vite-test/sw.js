@@ -27,7 +27,22 @@ gateway.registerFragment({
 	],
 });
 
-const middleware = getServiceWorkerMiddleware(gateway);
+const middleware = getServiceWorkerMiddleware(gateway, {
+	initializeHtmlRewriter: async () => {
+		if (self.HTMLRewriter) {
+			return;
+		}
+
+		const module = await import('wf-htmlrewriter/dist/html_rewriter.js');
+		const init = module.default;
+		const { HTMLRewriter } = module;
+		const wasmUrl = new URL('wf-htmlrewriter/dist/html_rewriter_bg.wasm', import.meta.url);
+		const wasmResponse = await fetch(wasmUrl);
+		await init(wasmResponse);
+		self.HTMLRewriter = HTMLRewriter;
+		console.log('[SW] HTMLRewriter polyfill initialized');
+	},
+});
 
 self.addEventListener('fetch', (event) => {
 	const url = new URL(event.request.url);
