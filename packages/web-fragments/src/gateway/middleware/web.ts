@@ -50,7 +50,24 @@ export function getWebMiddleware(
 		 *
 		 * However, we don't want the iframe's document to actually contain the fragment's content; we're only using it as an isolated execution context. Returning a stub document here is our workaround to that problem.
 		 */
-		if (requestSecFetchDest === 'iframe') {
+		// TODO: SW-WORKAROUND - In Service Workers, creating a new Request with mode:'cors' strips sec-fetch-dest header.
+		// As a temporary workaround, the SW wrapper sets x-wf-fetch-dest to preserve the original destination.
+		// This should be removed once we find a better solution.
+		const xwfFetchDest = request.headers.get('x-wf-fetch-dest');
+		const effectiveFetchDest = requestSecFetchDest || xwfFetchDest;
+
+		console.log(
+			'[Web Middleware] Fragment:',
+			matchedFragment.fragmentId,
+			'sec-fetch-dest:',
+			requestSecFetchDest,
+			'x-wf-fetch-dest:',
+			xwfFetchDest,
+			'effective:',
+			effectiveFetchDest,
+		);
+
+		if (effectiveFetchDest === 'iframe') {
 			// The title below is used be reframed to detect gateway misconfiguration. See reframed.ts
 			return new Response('<!doctype html><title>Web Fragments: reframed', {
 				// !!! Important: the header name must be Camel-Cased for overriding via the iframesHeaders to work !!!
@@ -68,7 +85,7 @@ export function getWebMiddleware(
 		// Forward the request to the fragment endpoint
 		const fragmentResponsePromise =
 			// but only if we are about to pierce, or are proxying the request to the fragment endpoint
-			matchedFragment.piercing || requestSecFetchDest !== 'document'
+			matchedFragment.piercing || effectiveFetchDest !== 'document'
 				? fetchFragment(request, matchedFragment, additionalHeaders, mode)
 				: undefined; //Promise.reject('Unexpected fragment request');
 
@@ -78,23 +95,43 @@ export function getWebMiddleware(
 		 *
 		 * For hard navigations we need to combine the appShell response with fragment response.
 		 */
-		if (requestSecFetchDest === 'document') {
+		if (effectiveFetchDest === 'document') {
+			console.log('[Web] PIERCING FLOW ENTERED - effectiveFetchDest=document, piercing:', matchedFragment.piercing);
 			// Fetch the app shell response from the origin and clone it so we can modify it
+			console.log('[Web] Fetching shell HTML via next()');
 			const originalNextResponse = await next();
+			console.log('[Web] Shell response received:', originalNextResponse.status, originalNextResponse.ok);
 			const appShellResponse = new Response(originalNextResponse.body, originalNextResponse);
 
 			const isHTMLResponse = appShellResponse.headers.get('content-type')?.startsWith('text/html');
+			console.log(
+				'[Web] Shell validation - ok:',
+				appShellResponse.ok,
+				'isHTML:',
+				isHTMLResponse,
+				'piercing:',
+				matchedFragment.piercing,
+			);
 
 			// If the app shell response is an error or not HTML or we are not piercing, pass it through to the client
 			if (!appShellResponse.ok || !isHTMLResponse || !matchedFragment.piercing) {
+				console.log('[Web] EARLY RETURN - Shell validation failed or not piercing');
 				appShellResponse.headers.append('vary', 'sec-fetch-dest');
 				appShellResponse.headers.append('x-web-fragment-id', '<app-shell>');
 				return appShellResponse;
 			}
 
 			// Combine the html responses from the fragment and app shell
+			console.log('[Web] About to combine shell and fragment responses');
 			return fragmentResponsePromise!
 				.then(function rejectErrorResponses(response: Response) {
+					console.log(
+						'[Web] Fragment response received:',
+						response.status,
+						response.ok,
+						'content-type:',
+						response.headers.get('content-type'),
+					);
 					if (response.ok) return response;
 					throw response;
 				})
@@ -102,22 +139,27 @@ export function getWebMiddleware(
 				.then(stripDoctype)
 				.then(prefixHtmlHeadBody)
 				.then(neutralizeScriptAndLinkTags)
-				.then((fragmentResponse) =>
-					embedFragmentIntoShellApp({
+				.then((fragmentResponse) => {
+					console.log('[Web] Calling embedFragmentIntoShellApp with fragment:', matchedFragment.fragmentId);
+					return embedFragmentIntoShellApp({
 						appShellResponse,
 						fragmentResponse,
 						fragmentConfig: matchedFragment,
 						gateway: gateway,
-					}),
-				)
+					});
+				})
 				.then((combinedResponse) => {
+					console.log('[Web] Combined response created successfully');
 					// Append Vary header to prevent BFCache issues
 					combinedResponse.headers.append('vary', 'sec-fetch-dest');
 					// Append X-Web-Fragment-Id for debugging purposes
 					combinedResponse.headers.append('x-web-fragment-id', matchedFragment.fragmentId);
 					return attachForwardedHeaders(Promise.resolve(combinedResponse), matchedFragment)(combinedResponse);
 				})
-				.catch(renderErrorResponse);
+				.catch((error) => {
+					console.error('[Web] ERROR in piercing flow:', error);
+					return renderErrorResponse(error);
+				});
 		}
 
 		const fragmentResponse = await fragmentResponsePromise!;
@@ -272,7 +314,10 @@ export function getWebMiddleware(
 		// make the request and ensure we don't follow redirects
 		// redirects should be sent all the way to the client, which can then decide to follow them or not
 		// this ensures that window.location is updated in the reframed iframe if the fragment returns a redirect
-		return fragmentFetch(fragmentReq, { redirect: 'manual' });
+		// TODO: SW-WORKAROUND - In Service Workers, redirect:'manual' with mode:'cors' is not allowed
+		// Use 'follow' in SW context (detected via isServiceWorker option)
+		const redirectMode = options.isServiceWorker ? 'follow' : 'manual';
+		return fragmentFetch(fragmentReq, { redirect: redirectMode });
 
 		// TODO: add timeout handling
 		// return fetch(fragmentReq, { signal: abortController.signal }).finally(

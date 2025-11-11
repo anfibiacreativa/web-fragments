@@ -101,7 +101,7 @@ importers:
         version: 2.1.2
       '@astrojs/tailwind':
         specifier: 5.1.2
-        version: 5.1.2(astro@4.16.17(@types/node@22.13.0)(lightningcss@1.27.0)(rollup@4.34.6)(terser@5.34.1)(typescript@5.7.2))(tailwindcss@3.4.16(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.7.2)))(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.7.2))
+        version: 5.1.2(astro@4.16.17(@types/node@22.13.0)(lightningcss@1.27.0)(rollup@4.34.6)(terser@5.34.1)(typescript@5.7.2))(tailwindcss@3.4.16(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.7.2)))(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.7.2))
       '@cloudflare/workers-types':
         specifier: 'catalog:'
         version: 4.20250224.0
@@ -116,7 +116,7 @@ importers:
         version: 1.2.10
       '@tailwindcss/typography':
         specifier: ^0.5.15
-        version: 0.5.15(tailwindcss@3.4.16(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.7.2)))
+        version: 0.5.15(tailwindcss@3.4.16(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.7.2)))
       '@types/eslint__js':
         specifier: ^8.42.3
         version: 8.42.3
@@ -173,7 +173,7 @@ importers:
         version: 2.5.5
       tailwindcss:
         specifier: ^3.4.13
-        version: 3.4.16(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.7.2))
+        version: 3.4.16(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.7.2))
       typescript:
         specifier: ^5.6.3
         version: 5.7.2
@@ -216,7 +216,7 @@ importers:
         version: 1.15.7
       ts-node:
         specifier: ^10.9.2
-        version: 10.9.2(@types/node@22.13.0)(typescript@5.5.4)
+        version: 10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.5.4)
       tsconfig-paths:
         specifier: ^4.2.0
         version: 4.2.0
@@ -342,7 +342,7 @@ importers:
     devDependencies:
       '@remix-run/dev':
         specifier: ^2.10.2
-        version: 2.10.2(@remix-run/react@2.10.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.5.4))(@remix-run/serve@2.10.2(typescript@5.5.4))(@types/node@22.13.0)(lightningcss@1.27.0)(terser@5.34.1)(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.5.4))(typescript@5.5.4)(vite@5.3.3(@types/node@22.13.0)(lightningcss@1.27.0)(terser@5.34.1))(wrangler@3.109.3(@cloudflare/workers-types@4.20250224.0))
+        version: 2.10.2(@remix-run/react@2.10.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.5.4))(@remix-run/serve@2.10.2(typescript@5.5.4))(@types/node@22.13.0)(lightningcss@1.27.0)(terser@5.34.1)(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.5.4))(typescript@5.5.4)(vite@5.3.3(@types/node@22.13.0)(lightningcss@1.27.0)(terser@5.34.1))(wrangler@3.109.3(@cloudflare/workers-types@4.20250224.0))
       '@types/react':
         specifier: ^18.2.20
         version: 18.3.3
@@ -381,7 +381,7 @@ importers:
         version: 8.4.39
       tailwindcss:
         specifier: ^3.4.4
-        version: 3.4.4(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.5.4))
+        version: 3.4.4(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.5.4))
       typescript:
         specifier: ^5.5.4
         version: 5.5.4
@@ -425,7 +425,7 @@ importers:
         version: 6.2.2
       ts-node-dev:
         specifier: ^2.0.0
-        version: 2.0.0(@types/node@20.14.10)(typescript@5.5.4)
+        version: 2.0.0(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@20.14.10)(typescript@5.5.4)
       typescript:
         specifier: 'catalog:'
         version: 5.5.4
@@ -2242,6 +2242,84 @@ packages:
 
   '@shikijs/vscode-textmate@9.3.0':
     resolution: {integrity: sha512-jn7/7ky30idSkd/O5yDBfAnVt+JJpepofP/POZ1iMOxK59cOfqIgg/Dj0eFsjOTMw+4ycJN0uhZH/Eb0bs/EUA==}
+
+  '@swc/core-darwin-arm64@1.15.1':
+    resolution: {integrity: sha512-vEPrVxegWIjKEz+1VCVuKRY89jhokhSmQ/YXBWLnmLj9cI08G61RTZJvdsIcjYUjjTu7NgZlYVK+b2y0fbh11g==}
+    engines: {node: '>=10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@swc/core-darwin-x64@1.15.1':
+    resolution: {integrity: sha512-z9QguKxE3aldvwKHHDg5OlKehasbJBF1lacn5CnN6SlrHbdwokXHFA3nIoO3Bh1Tw7bCgFtdIR4jKlTTn3kBZA==}
+    engines: {node: '>=10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@swc/core-linux-arm-gnueabihf@1.15.1':
+    resolution: {integrity: sha512-yS2FHA8E4YeiPG9YeYk/6mKiCWuXR5RdYlCmtlGzKcjWbI4GXUVe7+p9C0M6myRt3zdj3M1knmJxk52MQA9EZQ==}
+    engines: {node: '>=10'}
+    cpu: [arm]
+    os: [linux]
+
+  '@swc/core-linux-arm64-gnu@1.15.1':
+    resolution: {integrity: sha512-IFrjDu7+5Y61jLsUqBVXlXutDoPBX10eEeNTjW6C1yzm+cSTE7ayiKXMIFri4gEZ4VpXS6MUgkwjxtDpIXTh+w==}
+    engines: {node: '>=10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@swc/core-linux-arm64-musl@1.15.1':
+    resolution: {integrity: sha512-fKzP9mRQGbhc5QhJPIsqKNNX/jyWrZgBxmo3Nz1SPaepfCUc7RFmtcJQI5q8xAun3XabXjh90wqcY/OVyg2+Kg==}
+    engines: {node: '>=10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@swc/core-linux-x64-gnu@1.15.1':
+    resolution: {integrity: sha512-ZLjMi138uTJxb+1wzo4cB8mIbJbAsSLWRNeHc1g1pMvkERPWOGlem+LEYkkzaFzCNv1J8aKcL653Vtw8INHQeg==}
+    engines: {node: '>=10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@swc/core-linux-x64-musl@1.15.1':
+    resolution: {integrity: sha512-jvSI1IdsIYey5kOITzyajjofXOOySVitmLxb45OPUjoNojql4sDojvlW5zoHXXFePdA6qAX4Y6KbzAOV3T3ctA==}
+    engines: {node: '>=10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@swc/core-win32-arm64-msvc@1.15.1':
+    resolution: {integrity: sha512-X/FcDtNrDdY9r4FcXHt9QxUqC/2FbQdvZobCKHlHe8vTSKhUHOilWl5EBtkFVfsEs4D5/yAri9e3bJbwyBhhBw==}
+    engines: {node: '>=10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@swc/core-win32-ia32-msvc@1.15.1':
+    resolution: {integrity: sha512-vfheiWBux8PpC87oy1cshcqzgH7alWYpnVq5jWe7xuVkjqjGGDbBUKuS84eJCdsWcVaB5EXIWLKt+11W3/BOwA==}
+    engines: {node: '>=10'}
+    cpu: [ia32]
+    os: [win32]
+
+  '@swc/core-win32-x64-msvc@1.15.1':
+    resolution: {integrity: sha512-n3Ppn0LSov/IdlANq+8kxHqENuJRX5XtwQqPgQsgwKIcFq22u17NKfDs9vL5PwRsEHY6Xd67pnOqQX0h4AvbuQ==}
+    engines: {node: '>=10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@swc/core@1.15.1':
+    resolution: {integrity: sha512-s9GN3M2jA32k+StvuS9uGe4ztf5KVGBdlJMMC6LR6Ah23Lq/CWKVcC3WeQi8qaAcLd+DiddoNCNMUWymLv+wWQ==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      '@swc/helpers': '>=0.5.17'
+    peerDependenciesMeta:
+      '@swc/helpers':
+        optional: true
+
+  '@swc/counter@0.1.3':
+    resolution: {integrity: sha512-e2BR4lsJkkRlKZ/qCHPw9ZaSxc0MVUd7gtbtaB7aMvHeJVYe8sOB8DBZkP2DtISHGSku9sCK6T6cnY0CtXrOCQ==}
+
+  '@swc/types@0.1.25':
+    resolution: {integrity: sha512-iAoY/qRhNH8a/hBvm3zKj9qQ4oc2+3w1unPJa2XvTK3XjeLXtzcCingVPw/9e5mn1+0yPqxcBGp9Jf0pkfMb1g==}
+
+  '@swc/wasm@1.15.1':
+    resolution: {integrity: sha512-5f3gOgVOIeeJ8TbVLMHLj9GRsLtZrwFp8rTDpsR98zFMl0mCWG9kAaS/rag2tWUcyY1z8EcF7PgO39ykvysUfg==}
 
   '@tailwindcss/typography@0.5.15':
     resolution: {integrity: sha512-AqhlCXl+8grUz8uqExv5OTtgpjuVIwFTSXTrh8y9/pw6q2ek7fJ+Y8ZEVw7EB2DCcuCOtEjf9w3+J3rzts01uA==}
@@ -8144,13 +8222,13 @@ snapshots:
       stream-replace-string: 2.0.0
       zod: 3.23.8
 
-  '@astrojs/tailwind@5.1.2(astro@4.16.17(@types/node@22.13.0)(lightningcss@1.27.0)(rollup@4.34.6)(terser@5.34.1)(typescript@5.7.2))(tailwindcss@3.4.16(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.7.2)))(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.7.2))':
+  '@astrojs/tailwind@5.1.2(astro@4.16.17(@types/node@22.13.0)(lightningcss@1.27.0)(rollup@4.34.6)(terser@5.34.1)(typescript@5.7.2))(tailwindcss@3.4.16(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.7.2)))(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.7.2))':
     dependencies:
       astro: 4.16.17(@types/node@22.13.0)(lightningcss@1.27.0)(rollup@4.34.6)(terser@5.34.1)(typescript@5.7.2)
       autoprefixer: 10.4.20(postcss@8.4.49)
       postcss: 8.4.49
-      postcss-load-config: 4.0.2(postcss@8.4.49)(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.7.2))
-      tailwindcss: 3.4.16(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.7.2))
+      postcss-load-config: 4.0.2(postcss@8.4.49)(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.7.2))
+      tailwindcss: 3.4.16(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.7.2))
     transitivePeerDependencies:
       - ts-node
 
@@ -9559,7 +9637,7 @@ snapshots:
     dependencies:
       playwright: 1.54.2
 
-  '@remix-run/dev@2.10.2(@remix-run/react@2.10.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.5.4))(@remix-run/serve@2.10.2(typescript@5.5.4))(@types/node@22.13.0)(lightningcss@1.27.0)(terser@5.34.1)(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.5.4))(typescript@5.5.4)(vite@5.3.3(@types/node@22.13.0)(lightningcss@1.27.0)(terser@5.34.1))(wrangler@3.109.3(@cloudflare/workers-types@4.20250224.0))':
+  '@remix-run/dev@2.10.2(@remix-run/react@2.10.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.5.4))(@remix-run/serve@2.10.2(typescript@5.5.4))(@types/node@22.13.0)(lightningcss@1.27.0)(terser@5.34.1)(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.5.4))(typescript@5.5.4)(vite@5.3.3(@types/node@22.13.0)(lightningcss@1.27.0)(terser@5.34.1))(wrangler@3.109.3(@cloudflare/workers-types@4.20250224.0))':
     dependencies:
       '@babel/core': 7.24.7
       '@babel/generator': 7.24.7
@@ -9603,7 +9681,7 @@ snapshots:
       pidtree: 0.6.0
       postcss: 8.4.39
       postcss-discard-duplicates: 5.1.0(postcss@8.4.39)
-      postcss-load-config: 4.0.2(postcss@8.4.39)(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.5.4))
+      postcss-load-config: 4.0.2(postcss@8.4.39)(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.5.4))
       postcss-modules: 6.0.0(postcss@8.4.39)
       prettier: 2.8.8
       pretty-ms: 7.0.1
@@ -9873,13 +9951,71 @@ snapshots:
 
   '@shikijs/vscode-textmate@9.3.0': {}
 
-  '@tailwindcss/typography@0.5.15(tailwindcss@3.4.16(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.7.2)))':
+  '@swc/core-darwin-arm64@1.15.1':
+    optional: true
+
+  '@swc/core-darwin-x64@1.15.1':
+    optional: true
+
+  '@swc/core-linux-arm-gnueabihf@1.15.1':
+    optional: true
+
+  '@swc/core-linux-arm64-gnu@1.15.1':
+    optional: true
+
+  '@swc/core-linux-arm64-musl@1.15.1':
+    optional: true
+
+  '@swc/core-linux-x64-gnu@1.15.1':
+    optional: true
+
+  '@swc/core-linux-x64-musl@1.15.1':
+    optional: true
+
+  '@swc/core-win32-arm64-msvc@1.15.1':
+    optional: true
+
+  '@swc/core-win32-ia32-msvc@1.15.1':
+    optional: true
+
+  '@swc/core-win32-x64-msvc@1.15.1':
+    optional: true
+
+  '@swc/core@1.15.1':
+    dependencies:
+      '@swc/counter': 0.1.3
+      '@swc/types': 0.1.25
+    optionalDependencies:
+      '@swc/core-darwin-arm64': 1.15.1
+      '@swc/core-darwin-x64': 1.15.1
+      '@swc/core-linux-arm-gnueabihf': 1.15.1
+      '@swc/core-linux-arm64-gnu': 1.15.1
+      '@swc/core-linux-arm64-musl': 1.15.1
+      '@swc/core-linux-x64-gnu': 1.15.1
+      '@swc/core-linux-x64-musl': 1.15.1
+      '@swc/core-win32-arm64-msvc': 1.15.1
+      '@swc/core-win32-ia32-msvc': 1.15.1
+      '@swc/core-win32-x64-msvc': 1.15.1
+    optional: true
+
+  '@swc/counter@0.1.3':
+    optional: true
+
+  '@swc/types@0.1.25':
+    dependencies:
+      '@swc/counter': 0.1.3
+    optional: true
+
+  '@swc/wasm@1.15.1':
+    optional: true
+
+  '@tailwindcss/typography@0.5.15(tailwindcss@3.4.16(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.7.2)))':
     dependencies:
       lodash.castarray: 4.4.0
       lodash.isplainobject: 4.0.6
       lodash.merge: 4.6.2
       postcss-selector-parser: 6.0.10
-      tailwindcss: 3.4.16(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.7.2))
+      tailwindcss: 3.4.16(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.7.2))
 
   '@trysound/sax@0.2.0': {}
 
@@ -15130,21 +15266,21 @@ snapshots:
       camelcase-css: 2.0.1
       postcss: 8.4.49
 
-  postcss-load-config@4.0.2(postcss@8.4.39)(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.5.4)):
+  postcss-load-config@4.0.2(postcss@8.4.39)(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.5.4)):
     dependencies:
       lilconfig: 3.1.2
       yaml: 2.4.5
     optionalDependencies:
       postcss: 8.4.39
-      ts-node: 10.9.2(@types/node@22.13.0)(typescript@5.5.4)
+      ts-node: 10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.5.4)
 
-  postcss-load-config@4.0.2(postcss@8.4.49)(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.7.2)):
+  postcss-load-config@4.0.2(postcss@8.4.49)(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.7.2)):
     dependencies:
       lilconfig: 3.1.2
       yaml: 2.4.5
     optionalDependencies:
       postcss: 8.4.49
-      ts-node: 10.9.2(@types/node@22.13.0)(typescript@5.7.2)
+      ts-node: 10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.7.2)
 
   postcss-modules-extract-imports@3.1.0(postcss@8.4.39):
     dependencies:
@@ -16198,7 +16334,7 @@ snapshots:
 
   tailwind-merge@2.5.5: {}
 
-  tailwindcss@3.4.16(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.7.2)):
+  tailwindcss@3.4.16(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.7.2)):
     dependencies:
       '@alloc/quick-lru': 5.2.0
       arg: 5.0.2
@@ -16217,7 +16353,7 @@ snapshots:
       postcss: 8.4.49
       postcss-import: 15.1.0(postcss@8.4.49)
       postcss-js: 4.0.1(postcss@8.4.49)
-      postcss-load-config: 4.0.2(postcss@8.4.49)(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.7.2))
+      postcss-load-config: 4.0.2(postcss@8.4.49)(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.7.2))
       postcss-nested: 6.2.0(postcss@8.4.49)
       postcss-selector-parser: 6.1.2
       resolve: 1.22.8
@@ -16225,7 +16361,7 @@ snapshots:
     transitivePeerDependencies:
       - ts-node
 
-  tailwindcss@3.4.4(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.5.4)):
+  tailwindcss@3.4.4(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.5.4)):
     dependencies:
       '@alloc/quick-lru': 5.2.0
       arg: 5.0.2
@@ -16244,7 +16380,7 @@ snapshots:
       postcss: 8.4.39
       postcss-import: 15.1.0(postcss@8.4.39)
       postcss-js: 4.0.1(postcss@8.4.39)
-      postcss-load-config: 4.0.2(postcss@8.4.39)(ts-node@10.9.2(@types/node@22.13.0)(typescript@5.5.4))
+      postcss-load-config: 4.0.2(postcss@8.4.39)(ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.5.4))
       postcss-nested: 6.0.1(postcss@8.4.39)
       postcss-selector-parser: 6.1.0
       resolve: 1.22.8
@@ -16355,7 +16491,7 @@ snapshots:
 
   ts-interface-checker@0.1.13: {}
 
-  ts-node-dev@2.0.0(@types/node@20.14.10)(typescript@5.5.4):
+  ts-node-dev@2.0.0(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@20.14.10)(typescript@5.5.4):
     dependencies:
       chokidar: 3.6.0
       dynamic-dedupe: 0.3.0
@@ -16365,7 +16501,7 @@ snapshots:
       rimraf: 2.7.1
       source-map-support: 0.5.21
       tree-kill: 1.2.2
-      ts-node: 10.9.2(@types/node@20.14.10)(typescript@5.5.4)
+      ts-node: 10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@20.14.10)(typescript@5.5.4)
       tsconfig: 7.0.0
       typescript: 5.5.4
     transitivePeerDependencies:
@@ -16373,7 +16509,7 @@ snapshots:
       - '@swc/wasm'
       - '@types/node'
 
-  ts-node@10.9.2(@types/node@20.14.10)(typescript@5.5.4):
+  ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@20.14.10)(typescript@5.5.4):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.11
@@ -16390,8 +16526,11 @@ snapshots:
       typescript: 5.5.4
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
+    optionalDependencies:
+      '@swc/core': 1.15.1
+      '@swc/wasm': 1.15.1
 
-  ts-node@10.9.2(@types/node@22.13.0)(typescript@5.5.4):
+  ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.5.4):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.11
@@ -16408,8 +16547,11 @@ snapshots:
       typescript: 5.5.4
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
+    optionalDependencies:
+      '@swc/core': 1.15.1
+      '@swc/wasm': 1.15.1
 
-  ts-node@10.9.2(@types/node@22.13.0)(typescript@5.7.2):
+  ts-node@10.9.2(@swc/core@1.15.1)(@swc/wasm@1.15.1)(@types/node@22.13.0)(typescript@5.7.2):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.11
@@ -16426,6 +16568,9 @@ snapshots:
       typescript: 5.7.2
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
+    optionalDependencies:
+      '@swc/core': 1.15.1
+      '@swc/wasm': 1.15.1
     optional: true
 
   tsconfck@3.1.1(typescript@5.5.4):

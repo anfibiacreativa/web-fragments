@@ -5,7 +5,7 @@
  */
 
 import { FragmentGateway, FragmentMiddlewareOptions } from '../fragment-gateway';
-import { getWebMiddlewareForSW } from './web-for-sw';
+import { getWebMiddleware } from './web';
 
 /**
  * Minimal type definition for Service Worker FetchEvent to avoid requiring WebWorker lib.
@@ -27,15 +27,14 @@ export function getServiceWorkerMiddleware(
 	options: FragmentMiddlewareOptions = {},
 ): (request: Request, next: () => Promise<Response>) => Promise<Response> {
 	// Get the web middleware with service worker flag
-	const webMiddleware = getWebMiddlewareForSW(gateway, options);
+	const webMiddleware = getWebMiddleware(gateway, { ...options, isServiceWorker: true });
 
 	// Wrap to create a service worker-safe request
 	// otherwise this needs to be recreated in user-land every time
 	return async (request: Request, next: () => Promise<Response>): Promise<Response> => {
-		// Clone the request with properties that the Request() constructor accepts in Service Workers.
-		// The 'navigate' mode cannot be used when constructing a Request in a worker context, so we use 'cors' instead.
-		// See: https://fetch.spec.whatwg.org/#request (step 17: "If mode is 'navigate', then throw a TypeError")
-		// Also: https://developer.mozilla.org/docs/Web/API/Request/Request
+		// Clone the request with properties that the Request() constructor accepts in workers; see
+		// https://developer.mozilla.org/docs/Web/API/Request/Request for the mode/redirect coercions
+		// (e.g. mode 'navigate' throws, redirect 'manual' downgrades to 'follow').
 
 		// Determine the proper mode: use 'cors' for navigate mode
 		const safeMode = request.mode === 'navigate' ? 'cors' : request.mode;
@@ -43,29 +42,13 @@ export function getServiceWorkerMiddleware(
 		// TODO: SW-WORKAROUND - Browser strips sec-fetch-dest when creating Request with mode:'cors' in SW context.
 		// Preserve original sec-fetch-dest in custom header x-wf-fetch-dest so web.ts can detect iframe requests.
 		// This enables the reframed stub document pattern to work in Service Workers.
-		// See test demonstration: e2e/sw-vite-test/test-sec-fetch-dest.html
 		const secFetchDest = request.headers.get('sec-fetch-dest');
 		const headers = new Headers(request.headers);
-		
-		// Fallback: When sec-fetch-dest is not available (e.g., SW-controlled navigations),
-		// infer the destination from request.mode and request.destination
-		let effectiveDestination = secFetchDest;
-		if (!effectiveDestination) {
-			// Prioritize explicit iframe destination first
-			// (both iframe and document navigations have mode='navigate', so check destination first)
-			if (request.destination === 'iframe') {
-				effectiveDestination = 'iframe';
-				console.log('[SW Middleware] Inferred destination from request.destination=iframe:', effectiveDestination);
-			} else if (request.mode === 'navigate') {
-				// Fallback: top-level document navigation
-				effectiveDestination = 'document';
-				console.log('[SW Middleware] Inferred destination from mode=navigate:', effectiveDestination);
-			}
-		}		if (effectiveDestination) {
-			headers.set('x-wf-fetch-dest', effectiveDestination);
-			console.log('[SW Middleware] Preserving effective destination:', effectiveDestination, 'in x-wf-fetch-dest');
+		if (secFetchDest) {
+			headers.set('x-wf-fetch-dest', secFetchDest);
+			console.log('[SW Middleware] Preserving sec-fetch-dest:', secFetchDest, 'in x-wf-fetch-dest');
 		} else {
-			console.log('[SW Middleware] No sec-fetch-dest or navigational context found');
+			console.log('[SW Middleware] No sec-fetch-dest header found on original request');
 		}
 
 		// TODO: SW-WORKAROUND - Use same-origin credentials to avoid CORS issues with wildcard headers
