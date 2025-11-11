@@ -406,6 +406,9 @@ importers:
       web-fragments:
         specifier: workspace:*
         version: link:../../packages/web-fragments
+      wf-htmlrewriter:
+        specifier: ^0.0.13
+        version: 0.0.13
     devDependencies:
       vite:
         specifier: ^6.0.7

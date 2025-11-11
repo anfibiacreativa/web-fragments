@@ -15,6 +15,7 @@
 		"compression": "^1.7.4",
 		"express": "^4.19.2",
 		"http-proxy-middleware": "^3.0.0",
-		"web-fragments": "workspace:*"
+		"web-fragments": "workspace:*",
+		"wf-htmlrewriter": "^0.0.13"
 	}
 }

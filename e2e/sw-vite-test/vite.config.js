@@ -24,6 +24,6 @@ export default defineConfig({
 		},
 	},
 	optimizeDeps: {
-		exclude: ['htmlrewriter'],
+		exclude: ['wf-htmlrewriter'],
 	},
 });

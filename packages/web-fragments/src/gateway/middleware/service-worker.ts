@@ -7,6 +7,37 @@
 import { FragmentGateway, FragmentMiddlewareOptions } from '../fragment-gateway';
 import { getWebMiddleware } from './web';
 
+type ServiceWorkerMiddlewareOptions = FragmentMiddlewareOptions & {
+	initializeHtmlRewriter?: () => Promise<void>;
+};
+
+let htmlRewriterInitPromise: Promise<void> | null = null;
+
+async function ensureHtmlRewriter(initializer?: () => Promise<void>): Promise<void> {
+	if (typeof (globalThis as { HTMLRewriter?: unknown }).HTMLRewriter !== 'undefined') {
+		return;
+	}
+
+	if (!initializer) {
+		throw new Error(
+			'HTMLRewriter is not available in this Service Worker context. Provide initializeHtmlRewriter when calling getServiceWorkerMiddleware.',
+		);
+	}
+
+	if (!htmlRewriterInitPromise) {
+		htmlRewriterInitPromise = initializer().catch((error) => {
+			htmlRewriterInitPromise = null;
+			throw error;
+		});
+	}
+
+	await htmlRewriterInitPromise;
+
+	if (typeof (globalThis as { HTMLRewriter?: unknown }).HTMLRewriter === 'undefined') {
+		throw new Error('HTMLRewriter initialization completed, but the constructor is still undefined.');
+	}
+}
+
 /**
  * Minimal type definition for Service Worker FetchEvent to avoid requiring WebWorker lib.
  * When using this middleware, ensure your service worker file includes /// <reference lib="WebWorker" />
@@ -26,12 +57,16 @@ export function getServiceWorkerMiddleware(
 	gateway: FragmentGateway,
 	options: FragmentMiddlewareOptions = {},
 ): (request: Request, next: () => Promise<Response>) => Promise<Response> {
+	const swOptions = options as ServiceWorkerMiddlewareOptions;
+
 	// Get the web middleware with service worker flag
 	const webMiddleware = getWebMiddleware(gateway, { ...options, isServiceWorker: true });
 
 	// Wrap to create a service worker-safe request
 	// otherwise this needs to be recreated in user-land every time
 	return async (request: Request, next: () => Promise<Response>): Promise<Response> => {
+		await ensureHtmlRewriter(swOptions.initializeHtmlRewriter);
+
 		// Clone the request with properties that the Request() constructor accepts in workers; see
 		// https://developer.mozilla.org/docs/Web/API/Request/Request for the mode/redirect coercions
 		// (e.g. mode 'navigate' throws, redirect 'manual' downgrades to 'follow').
@@ -43,12 +78,16 @@ export function getServiceWorkerMiddleware(
 		// Preserve original sec-fetch-dest in custom header x-wf-fetch-dest so web.ts can detect iframe requests.
 		// This enables the reframed stub document pattern to work in Service Workers.
 		const secFetchDest = request.headers.get('sec-fetch-dest');
+		const requestDestination = (request as Request & { destination?: string }).destination;
 		const headers = new Headers(request.headers);
 		if (secFetchDest) {
 			headers.set('x-wf-fetch-dest', secFetchDest);
 			console.log('[SW Middleware] Preserving sec-fetch-dest:', secFetchDest, 'in x-wf-fetch-dest');
+		} else if (requestDestination) {
+			headers.set('x-wf-fetch-dest', requestDestination);
+			console.log('[SW Middleware] Derived destination from request.destination:', requestDestination);
 		} else {
-			console.log('[SW Middleware] No sec-fetch-dest header found on original request');
+			console.log('[SW Middleware] No sec-fetch-dest header or request.destination found on original request');
 		}
 
 		// TODO: SW-WORKAROUND - Use same-origin credentials to avoid CORS issues with wildcard headers
