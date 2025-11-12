@@ -8,14 +8,32 @@ gateway.registerFragment({
 	fragmentId: 'remix',
 	endpoint: 'http://localhost:5174',
 	piercing: true,
-	routePatterns: ['/remix-page', '/remix-page/:path*'],
+	routePatterns: [
+		'/remix-page',
+		'/remix-page/:_*',
+		'/_fragment/remix/:_*',
+		'/app/:_*',
+		'/@id/:_*',
+		'/@vite/:_*',
+	],
+	onSsrFetchError: () => ({
+		response: new Response('<p>Remix fragment not found</p>', {
+			headers: { 'content-type': 'text/html' },
+		}),
+	}),
 });
 
 gateway.registerFragment({
 	fragmentId: 'qwik',
 	endpoint: 'http://localhost:5173',
 	piercing: true,
-	routePatterns: ['/qwik-page', '/qwik-page/:path*'],
+	forwardFragmentHeaders: ['x-fragment-name'],
+	routePatterns: ['/qwik-page', '/qwik-page/:_*', '/_fragment/qwik/:_*'],
+	onSsrFetchError: () => ({
+		response: new Response('<p>Qwik fragment not found</p>', {
+			headers: { 'content-type': 'text/html' },
+		}),
+	}),
 });
 
 gateway.registerFragment({
@@ -67,21 +85,6 @@ self.addEventListener('fetch', (event) => {
 		return;
 	}
 
-	// Let fragment assets (scripts, styles, HMR, etc.) pass through to their origin servers
-	// These requests should NOT be intercepted by the service worker
-	if (
-		url.pathname.startsWith('/app/') ||
-		url.pathname.startsWith('/assets/') ||
-		url.pathname.startsWith('/@') ||
-		url.pathname.startsWith('/src/') ||
-		url.pathname.startsWith('/node_modules/') ||
-		url.pathname.includes('.js') ||
-		url.pathname.includes('.css') ||
-		url.pathname.includes('.map')
-	) {
-		return;
-	}
-
 	// Check if this is a fragment route
 	const requestFragmentId = event.request.headers.get('x-web-fragment-id') ?? undefined;
 	const matchedFragment = gateway.matchRequestToFragment(url.pathname + url.search, requestFragmentId);
@@ -95,10 +98,31 @@ self.addEventListener('fetch', (event) => {
 			matchedFragment.fragmentId,
 			'sec-fetch-dest:',
 			secFetchDest,
+			'clientId:',
+			event.clientId,
+			'\nresultingClientId:',
+			event.resultingClientId,
+			'destination:',
+			event.request.destination,
+			'mode:',
+			event.request.mode,
 		);
 
 		event.respondWith(
 			(async () => {
+				const client = event.clientId ? await self.clients.get(event.clientId) : null;
+				const destHeader = event.request.headers.get('sec-fetch-dest');
+				const requestDestination = event.request.destination;
+				const isIframeNavigation = destHeader === 'iframe' || requestDestination === 'iframe' || client?.frameType === 'nested';
+
+				let requestForMiddleware = event.request;
+				if (isIframeNavigation) {
+					const headers = new Headers(event.request.headers);
+					headers.set('x-wf-fetch-dest', 'iframe');
+					requestForMiddleware = new Request(event.request, { headers });
+					console.log('[SW] Forcing iframe stub flow for request', url.pathname, 'client frameType:', client?.frameType);
+				}
+
 				// Create a next() function that fetches the HTML shell from the origin server
 				// We need to bypass the service worker to avoid infinite loops
 				const next = async () => {
@@ -116,7 +140,7 @@ self.addEventListener('fetch', (event) => {
 					});
 				};
 
-				const response = await middleware(event.request, next);
+				const response = await middleware(requestForMiddleware, next);
 				console.log('[SW] Middleware returned response:', response);
 				return response;
 			})(),
