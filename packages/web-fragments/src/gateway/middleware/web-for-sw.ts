@@ -14,6 +14,32 @@ const isNativeHtmlRewriter = HTMLRewriter.toString().endsWith('{ [native code] }
  * @param {FragmentMiddlewareOptions} [options={}] - Optional middleware settings.
  * @returns {Function} - A middleware function for processing web requests.
  */
+function safelyRewrapResponse(
+	source: Response,
+	mutateHeaders?: (headers: Headers) => void,
+): Response {
+	const clone = source.clone();
+	const { status } = clone;
+
+	if (status < 200 || status > 599) {
+		console.warn(
+			'[Web] Received response with unsupported status for rewrap:',
+			status,
+			'Returning cloned response without header mutations.',
+		);
+		return clone;
+	}
+
+	const headers = new Headers(clone.headers);
+	mutateHeaders?.(headers);
+
+	return new Response(clone.body, {
+		status,
+		statusText: clone.statusText,
+		headers,
+	});
+}
+
 export function getWebMiddlewareForSW(
 	gateway: FragmentGateway,
 	options: FragmentMiddlewareOptions = {},
@@ -32,16 +58,9 @@ export function getWebMiddlewareForSW(
 		 * If this request doesn't match any fragment routes, then send it to the legacy app by calling the next() middleware function.
 		 */
 		if (!matchedFragment) {
-			// SW FIX: Use .clone() for proper response duplication
 			const originalNextResponse = await next();
-			const appShellResponse = originalNextResponse.clone();
-			// SW FIX: Create new Headers object (cloned response headers are immutable)
-			const headers = new Headers(appShellResponse.headers);
-			headers.append('x-web-fragment-id', '<app-shell>');
-			return new Response(appShellResponse.body, { 
-				status: appShellResponse.status, 
-				statusText: appShellResponse.statusText, 
-				headers 
+			return safelyRewrapResponse(originalNextResponse, (headers) => {
+				headers.append('x-web-fragment-id', '<app-shell>');
 			});
 		}
 
@@ -123,11 +142,10 @@ export function getWebMiddlewareForSW(
 			// If the app shell response is an error or not HTML or we are not piercing, pass it through to the client
 			if (!appShellResponse.ok || !isHTMLResponse || !matchedFragment.piercing) {
 				console.log('[Web] EARLY RETURN - Shell validation failed or not piercing');
-				// SW FIX: Create new Headers object (cloned response headers are immutable)
-				const headers = new Headers(appShellResponse.headers);
-				headers.append('vary', 'sec-fetch-dest');
-				headers.append('x-web-fragment-id', '<app-shell>');
-				return new Response(appShellResponse.body, { status: appShellResponse.status, statusText: appShellResponse.statusText, headers });
+				return safelyRewrapResponse(appShellResponse, (headers) => {
+					headers.append('vary', 'sec-fetch-dest');
+					headers.append('x-web-fragment-id', '<app-shell>');
+				});
 			}
 
 			// Combine the html responses from the fragment and app shell
@@ -159,11 +177,10 @@ export function getWebMiddlewareForSW(
 				})
 				.then((combinedResponse) => {
 					console.log('[Web] Combined response created successfully');
-					// SW FIX: Create new Headers object (cloned response headers are immutable)
-					const headers = new Headers(combinedResponse.headers);
-					headers.append('vary', 'sec-fetch-dest');
-					headers.append('x-web-fragment-id', matchedFragment.fragmentId);
-					const responseWithHeaders = new Response(combinedResponse.body, { status: combinedResponse.status, statusText: combinedResponse.statusText, headers });
+					const responseWithHeaders = safelyRewrapResponse(combinedResponse, (headers) => {
+						headers.append('vary', 'sec-fetch-dest');
+						headers.append('x-web-fragment-id', matchedFragment.fragmentId);
+					});
 					return attachForwardedHeaders(Promise.resolve(responseWithHeaders), matchedFragment)(responseWithHeaders);
 				})
 				.catch((error) => {
@@ -181,11 +198,10 @@ export function getWebMiddlewareForSW(
 		 * Simply pass through the fragment response but append the vary header to prevent BFCache issues.
 		 */
 		if (requestSecFetchDest === 'empty') {
-			// SW FIX: Create new Headers object (cloned response headers are immutable)
-			const headers = new Headers(fragmentResponse.headers);
-			headers.append('vary', 'sec-fetch-dest');
-			headers.append('x-web-fragment-id', matchedFragment.fragmentId);
-			const fragmentSoftNavResponse = new Response(fragmentResponse.body, { status: fragmentResponse.status, statusText: fragmentResponse.statusText, headers });
+			const fragmentSoftNavResponse = safelyRewrapResponse(fragmentResponse, (headers) => {
+				headers.append('vary', 'sec-fetch-dest');
+				headers.append('x-web-fragment-id', matchedFragment.fragmentId);
+			});
 
 			return prefixHtmlHeadBody(fragmentSoftNavResponse);
 		}
@@ -197,9 +213,9 @@ export function getWebMiddlewareForSW(
 		 * Simply pass through the fragment response.
 		 */
 		// SW FIX: Create new Headers object (cloned response headers are immutable)
-		const assetHeaders = new Headers(fragmentResponse.headers);
-		assetHeaders.append('x-web-fragment-id', matchedFragment.fragmentId);
-		const fragmentAssetResponse = new Response(fragmentResponse.body, { status: fragmentResponse.status, statusText: fragmentResponse.statusText, headers: assetHeaders });
+		const fragmentAssetResponse = safelyRewrapResponse(fragmentResponse, (headers) => {
+			headers.append('x-web-fragment-id', matchedFragment.fragmentId);
+		});
 
 		if (mode === 'development' && ['gzip', 'br'].includes(fragmentAssetResponse.headers.get('content-encoding')!)) {
 			// Due to a bug in miniflare which doesn't pass through compressed responses correctly,
