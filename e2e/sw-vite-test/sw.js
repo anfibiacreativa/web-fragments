@@ -15,6 +15,7 @@ gateway.registerFragment({
 		'/app/:_*',
 		'/@id/:_*',
 		'/@vite/:_*',
+		'/node_modules/.vite/:_*',
 	],
 	onSsrFetchError: () => ({
 		response: new Response('<p>Remix fragment not found</p>', {
@@ -110,17 +111,39 @@ self.addEventListener('fetch', (event) => {
 
 		event.respondWith(
 			(async () => {
-				const client = event.clientId ? await self.clients.get(event.clientId) : null;
+				const targetClientId = event.clientId ?? event.resultingClientId;
+				const client = targetClientId ? await self.clients.get(targetClientId) : null;
 				const destHeader = event.request.headers.get('sec-fetch-dest');
 				const requestDestination = event.request.destination;
-				const isIframeNavigation = destHeader === 'iframe' || requestDestination === 'iframe' || client?.frameType === 'nested';
+				const secFetchUser = event.request.headers.get('sec-fetch-user');
+				const navDestination = destHeader ?? requestDestination;
+				const clientFrameType = client?.frameType;
+				const nonUserNavigate =
+					event.request.mode === 'navigate' &&
+					navDestination === 'document' &&
+					secFetchUser !== '?1' &&
+					clientFrameType === 'nested';
+				const isIframeNavigation =
+					destHeader === 'iframe' ||
+					requestDestination === 'iframe' ||
+					clientFrameType === 'nested' ||
+					nonUserNavigate;
 
 				let requestForMiddleware = event.request;
 				if (isIframeNavigation) {
 					const headers = new Headers(event.request.headers);
 					headers.set('x-wf-fetch-dest', 'iframe');
 					requestForMiddleware = new Request(event.request, { headers });
-					console.log('[SW] Forcing iframe stub flow for request', url.pathname, 'client frameType:', client?.frameType);
+					console.log(
+						'[SW] Forcing iframe stub flow for request',
+						url.pathname,
+						'client frameType:',
+						clientFrameType,
+						'nonUserNavigate:',
+						nonUserNavigate,
+						'sec-fetch-user:',
+						secFetchUser,
+					);
 				}
 
 				// Create a next() function that fetches the HTML shell from the origin server

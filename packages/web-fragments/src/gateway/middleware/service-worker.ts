@@ -5,7 +5,7 @@
  */
 
 import { FragmentGateway, FragmentMiddlewareOptions } from '../fragment-gateway';
-import { getWebMiddleware } from './web';
+import { getWebMiddlewareForSW } from './web-for-sw';
 
 type ServiceWorkerMiddlewareOptions = FragmentMiddlewareOptions & {
 	initializeHtmlRewriter?: () => Promise<void>;
@@ -59,8 +59,8 @@ export function getServiceWorkerMiddleware(
 ): (request: Request, next: () => Promise<Response>) => Promise<Response> {
 	const swOptions = options as ServiceWorkerMiddlewareOptions;
 
-	// Get the web middleware with service worker flag
-	const webMiddleware = getWebMiddleware(gateway, { ...options, isServiceWorker: true });
+	// Get the web middleware variant that is hardened for Service Worker environments
+	const webMiddleware = getWebMiddlewareForSW(gateway, { ...options, isServiceWorker: true });
 
 	// Wrap to create a service worker-safe request
 	// otherwise this needs to be recreated in user-land every time
