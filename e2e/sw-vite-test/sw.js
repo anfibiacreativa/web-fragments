@@ -124,10 +124,7 @@ self.addEventListener('fetch', (event) => {
 					secFetchUser !== '?1' &&
 					clientFrameType === 'nested';
 				const isIframeNavigation =
-					destHeader === 'iframe' ||
-					requestDestination === 'iframe' ||
-					clientFrameType === 'nested' ||
-					nonUserNavigate;
+					destHeader === 'iframe' || requestDestination === 'iframe' || clientFrameType === 'nested' || nonUserNavigate;
 
 				let requestForMiddleware = event.request;
 				if (isIframeNavigation) {

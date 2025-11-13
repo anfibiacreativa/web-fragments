@@ -14,10 +14,7 @@ const isNativeHtmlRewriter = HTMLRewriter.toString().endsWith('{ [native code] }
  * @param {FragmentMiddlewareOptions} [options={}] - Optional middleware settings.
  * @returns {Function} - A middleware function for processing web requests.
  */
-function safelyRewrapResponse(
-	source: Response,
-	mutateHeaders?: (headers: Headers) => void,
-): Response {
+function safelyRewrapResponse(source: Response, mutateHeaders?: (headers: Headers) => void): Response {
 	const clone = source.clone();
 	const { status } = clone;
 
@@ -354,16 +351,26 @@ export function getWebMiddlewareForSW(
 		gateway: FragmentGatewayConfig;
 	}) {
 		const { fragmentId, piercingClassNames = [] } = fragmentConfig;
-		
+
 		console.log('[Web] embedFragmentIntoShellApp entered - fragmentId:', fragmentId);
-		console.log('[Web] appShellResponse ok/status/content-type:', appShellResponse.ok, appShellResponse.status, appShellResponse.headers.get('content-type'));
-		console.log('[Web] fragmentResponse ok/status/content-type:', fragmentResponse.ok, fragmentResponse.status, fragmentResponse.headers.get('content-type'));
-		
+		console.log(
+			'[Web] appShellResponse ok/status/content-type:',
+			appShellResponse.ok,
+			appShellResponse.status,
+			appShellResponse.headers.get('content-type'),
+		);
+		console.log(
+			'[Web] fragmentResponse ok/status/content-type:',
+			fragmentResponse.ok,
+			fragmentResponse.status,
+			fragmentResponse.headers.get('content-type'),
+		);
+
 		if (typeof (globalThis as any).HTMLRewriter === 'undefined') {
 			console.warn('[Web] HTMLRewriter is not available in this runtime. Aborting embedding.');
 			return appShellResponse;
 		}
-		
+
 		const shellText = await appShellResponse.clone().text();
 		const fragText = await fragmentResponse.clone().text();
 		console.log('[Web] shell length:', shellText.length);
@@ -389,7 +396,10 @@ export function getWebMiddlewareForSW(
 				})
 				.on('web-fragment', {
 					element(element) {
-						console.log('[Web] HTMLRewriter matched <web-fragment> element with fragment-id:', element.getAttribute('fragment-id'));
+						console.log(
+							'[Web] HTMLRewriter matched <web-fragment> element with fragment-id:',
+							element.getAttribute('fragment-id'),
+						);
 						if (element.getAttribute('fragment-id') !== fragmentId) return;
 						element.append('<template shadowrootmode="open">', { html: true });
 
@@ -424,7 +434,10 @@ export function getWebMiddlewareForSW(
 				})
 				.on('web-fragment', {
 					element(element) {
-						console.log('[Web] HTMLRewriter (polyfill) matched <web-fragment> element with fragment-id:', element.getAttribute('fragment-id'));
+						console.log(
+							'[Web] HTMLRewriter (polyfill) matched <web-fragment> element with fragment-id:',
+							element.getAttribute('fragment-id'),
+						);
 						if (element.getAttribute('fragment-id') !== fragmentId) return;
 
 						console.log('[Web] Embedding fragment content (length:', fragmentContent.length, ')');
