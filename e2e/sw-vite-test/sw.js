@@ -1,22 +1,13 @@
 import { FragmentGateway, getServiceWorkerMiddleware } from 'web-fragments/gateway';
 
 const gateway = new FragmentGateway();
-const appOrigin = self.location.origin;
 
 // Register fragments with the gateway
 gateway.registerFragment({
 	fragmentId: 'remix',
-	endpoint: 'http://localhost:5174',
+	endpoint: 'http://localhost:3000',
 	piercing: true,
-	routePatterns: [
-		'/remix-page',
-		'/remix-page/:_*',
-		'/_fragment/remix/:_*',
-		'/app/:_*',
-		'/@id/:_*',
-		'/@vite/:_*',
-		'/node_modules/.vite/:_*',
-	],
+	routePatterns: ['/remix-page', '/remix-page/:_*', '/_fragment/remix/:_*'],
 	onSsrFetchError: () => ({
 		response: new Response('<p>Remix fragment not found</p>', {
 			headers: { 'content-type': 'text/html' },
@@ -26,7 +17,7 @@ gateway.registerFragment({
 
 gateway.registerFragment({
 	fragmentId: 'qwik',
-	endpoint: 'http://localhost:5173',
+	endpoint: 'http://localhost:8123',
 	piercing: true,
 	forwardFragmentHeaders: ['x-fragment-name'],
 	routePatterns: ['/qwik-page', '/qwik-page/:_*', '/_fragment/qwik/:_*'],
