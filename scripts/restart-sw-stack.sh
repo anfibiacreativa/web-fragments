@@ -48,8 +48,8 @@ PORTS_TO_CLEAR=(3000 3005 4182 5173 5174 8123)
 PATTERNS_TO_KILL=(
   "remix-serve"
   "remix vite:dev"
-  "pierced-react___remix-fragment dev"
-  "pierced-react___qwik-fragment dev"
+  "pierced-react___remix-fragment buildAndServe"
+  "pierced-react___qwik-fragment buildAndServe"
   "vite preview --port 4182"
   "sw-vite-test/server.js"
   "wrangler pages"
@@ -61,15 +61,6 @@ kill_by_port "${PORTS_TO_CLEAR[@]}"
 
 sleep 1
 
-if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
-  log "Building web-fragments package"
-  (cd "$ROOT_DIR/packages/web-fragments" && pnpm build)
-
-  log "Building service worker host"
-  (cd "$ROOT_DIR/e2e/sw-vite-test" && pnpm build)
-else
-  log "Skipping builds (SKIP_BUILD=1)"
-fi
 
 PIDS=()
 LABELS=()
@@ -105,17 +96,20 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
-start_process "Qwik fragment dev (http://localhost:5173)" \
+start_process "Qwik fragment dev (http://localhost:8123)" \
   "$ROOT_DIR/e2e/pierced-react/fragments/qwik" \
-  env PORT=5173 VITE_PORT=5173 pnpm dev
+  pnpm buildAndServe
 
-start_process "Remix fragment dev (http://localhost:5174)" \
+start_process "Remix fragment dev (http://localhost:3000)" \
   "$ROOT_DIR/e2e/pierced-react/fragments/remix" \
-  env PORT=5174 VITE_PORT=5174 pnpm dev
+  pnpm buildAndServe
+
+log "Building Service Worker..."
+(cd "$ROOT_DIR/e2e/sw-vite-test" && pnpm build)
 
 start_process "Service worker host (http://localhost:4182)" \
   "$ROOT_DIR/e2e/sw-vite-test" \
-  env REMIX_TARGET=http://localhost:5174 QWIK_TARGET=http://localhost:5173 pnpm serve
+  env REMIX_TARGET=http://localhost:3000 QWIK_TARGET=http://localhost:8123 pnpm serve
 
 log "Servers are up. Press Ctrl+C to stop everything."
 

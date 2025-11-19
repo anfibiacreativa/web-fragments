@@ -16,6 +16,36 @@ declare global {
 	interface QwikCityPlatform extends PlatformCloudflarePages {}
 }
 
-const fetch = createQwikCity({ render, qwikCityPlan, manifest });
+const qwikCity = createQwikCity({ render, qwikCityPlan, manifest });
+
+// Wrap with CORS middleware
+const fetch = async (request: Request, env: any, ctx: any) => {
+	// Handle preflight requests
+	if (request.method === 'OPTIONS') {
+		return new Response(null, {
+			headers: {
+				'Access-Control-Allow-Origin': '*',
+				'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+				'Access-Control-Allow-Headers': '*',
+				'Access-Control-Max-Age': '86400',
+			},
+		});
+	}
+
+	// Handle actual requests
+	const response = await qwikCity(request, env, ctx);
+	
+	// Add CORS headers to response
+	const headers = new Headers(response.headers);
+	headers.set('Access-Control-Allow-Origin', '*');
+	headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+	headers.set('Access-Control-Allow-Headers', '*');
+	
+	return new Response(response.body, {
+		status: response.status,
+		statusText: response.statusText,
+		headers,
+	});
+};
 
 export { fetch };

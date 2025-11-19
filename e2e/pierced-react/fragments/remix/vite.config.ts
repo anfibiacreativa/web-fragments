@@ -3,7 +3,6 @@ import { defineConfig } from 'vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
-	mode: 'development',
 	build: {
 		minify: false,
 		assetsDir: '_fragment/remix/assets',
