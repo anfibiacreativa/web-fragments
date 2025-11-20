@@ -25,9 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	console.log('[Main] DOMContentLoaded fired');
 	// Get fragment ID from URL path (e.g., /qwik-page -> qwik)
 	const fragmentId = window.location.pathname.match(/\/([^-]+)-page/)?.[1];
-	
+
 	console.log('[Main] Detected fragment ID from path:', fragmentId);
-	
+
 	if (fragmentId) {
 		const main = document.querySelector('main');
 		if (main) {

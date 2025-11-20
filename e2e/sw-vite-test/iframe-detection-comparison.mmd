@@ -1,6 +1,6 @@
 graph TD
     Start[Iframe navigates to /qwik-page]
-    
+
     subgraph broken["❌ BROKEN FLOW (Your Custom Code)"]
         B1[SW fetch event fires]
         B2{Custom iframe detection<br/>clientFrameType === 'nested'?}
@@ -8,20 +8,20 @@ graph TD
         B4[Pass to middleware]
         B5[middleware gets x-wf-fetch-dest: iframe]
         B6[Returns stub document ✅]
-        
+
         B2A[Do NOT set x-wf-fetch-dest]
         B2B[Pass to middleware]
         B2C[middleware: effectiveFetchDest = 'document']
         B2D[Returns FULL HTML ❌]
         B2E[iframe.title = 'Qwik Fragment Page']
         B2F[THROW ERROR ❌]
-        
+
         B1 --> B2
         B2 -->|"YES<br/>(Sometimes)"| B3
         B3 --> B4
         B4 --> B5
         B5 --> B6
-        
+
         B2 -->|"NO<br/>(Often on first nav)"| B2A
         B2A --> B2B
         B2B --> B2C
@@ -29,7 +29,7 @@ graph TD
         B2D --> B2E
         B2E --> B2F
     end
-    
+
     subgraph fixed["✅ FIXED FLOW (Library Handles It)"]
         F1[SW fetch event fires]
         F2[Pass request AS-IS to middleware]
@@ -46,7 +46,7 @@ graph TD
         F13[iframe.title = 'Web Fragments: reframed']
         F14[Validation passes ✅]
         F15[Scripts execute ✅]
-        
+
         F1 --> F2
         F2 --> F3
         F3 --> F4
@@ -64,21 +64,21 @@ graph TD
         F13 --> F14
         F14 --> F15
     end
-    
+
     Start --> B1
     Start --> F1
-    
+
     style B2F fill:#ff6b6b
     style B2D fill:#ff6b6b
     style B2C fill:#ff6b6b
     style B2A fill:#ffa07a
-    
+
     style F12 fill:#90ee90
     style F14 fill:#90ee90
     style F15 fill:#90ee90
-    
+
     classDef problem fill:#ffcccc,stroke:#ff0000,stroke-width:2px
     classDef solution fill:#ccffcc,stroke:#00ff00,stroke-width:2px
-    
+
     class broken problem
     class fixed solution

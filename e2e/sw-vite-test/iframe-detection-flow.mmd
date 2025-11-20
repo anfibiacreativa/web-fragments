@@ -19,57 +19,57 @@ sequenceDiagram
     SW->>+CDN: next() - fetch shell
     Note right of SW: GET /qwik-page.html
     CDN-->>-SW: Shell HTML (empty main)
-    
+
     SW->>+Middleware: middleware(request, next)
     Note right of SW: request has:<br/>sec-fetch-dest: document
-    
+
     Middleware->>Middleware: effectiveFetchDest = 'document'
     Note right of Middleware: Piercing flow activated
-    
+
     Middleware->>Middleware: Fetch fragment HTML<br/>Embed in <web-fragment-host>
-    
+
     Middleware-->>-SW: Combined HTML
     SW-->>-Browser: Page with pierced fragment
-    
+
     Browser->>Browser: DOMContentLoaded
     Browser->>Browser: main.js creates <web-fragment>
-    
+
     Browser->>+WF: connectedCallback()
     WF->>WF: querySelector('web-fragment-host')
     Note right of WF: Finds pierced host in document
-    
+
     WF->>+WFH: portalHost(shadowRoot)
     WFH->>WFH: Move into <web-fragment> shadow
-    
+
     WFH->>WFH: Create hidden iframe
     Note right of WFH: iframe.src = '/qwik-page'
-    
+
     WFH->>+Iframe: Navigate
     Iframe->>+SW: GET /qwik-page
     Note right of Iframe: ⚠️ CRITICAL REQUEST<br/>sec-fetch-dest: ???<br/>destination: ???
-    
+
     SW->>SW: Custom iframe detection
     Note right of SW: PROBLEM: Your custom code<br/>clientFrameType checks<br/>May not work reliably
-    
+
     alt Custom detection fails
         SW->>SW: isIframeNavigation = false
         SW->>+Middleware: middleware(request, next)
         Note right of SW: ❌ No x-wf-fetch-dest: iframe set
-        
+
         Middleware->>Middleware: effectiveFetchDest = 'document'
         Note right of Middleware: ❌ WRONG! Should be 'iframe'
-        
+
         Middleware-->>-SW: Full HTML page
         Note left of Middleware: Returns pierced HTML<br/>Title: "Qwik Fragment Page"
-        
+
         SW-->>-Iframe: Full HTML
         Iframe->>Iframe: Check document.title
         Note right of Iframe: Expected: "Web Fragments: reframed"<br/>Actual: "Qwik Fragment Page"
-        
+
         Iframe-->>WFH: ❌ THROW ERROR
         Note left of Iframe: "Expected title to be<br/>'Web Fragments: reframed'"
     end
-    
+
     WFH-->>-WF: Error propagates
     WF-->>-Browser: ❌ Fragment fails to load
 
@@ -81,45 +81,45 @@ sequenceDiagram
     SW->>SW: matchRequestToFragment()
     SW->>+CDN: next()
     CDN-->>-SW: Shell HTML
-    
+
     SW->>+Middleware: middleware(request, next)
     Note right of SW: ✅ Pass request AS-IS<br/>Let middleware handle detection
-    
+
     Middleware->>Middleware: service-worker.ts detects mode
     Note right of Middleware: Creates safe request<br/>Preserves sec-fetch-dest<br/>in x-wf-fetch-dest
-    
+
     Middleware->>Middleware: web.ts checks<br/>effectiveFetchDest = 'document'
     Middleware-->>-SW: Combined HTML
     SW-->>-Browser: Page loads
-    
+
     Browser->>Browser: main.js creates <web-fragment>
     Browser->>+WF: connectedCallback()
     WF->>+WFH: portalHost()
     WFH->>WFH: reframed() creates iframe
-    
+
     WFH->>+Iframe: Navigate to /qwik-page
     Iframe->>+SW: GET /qwik-page
     Note right of Iframe: ✅ sec-fetch-dest: iframe<br/>OR destination: 'iframe'
-    
+
     SW->>+Middleware: middleware(request, next)
     Note right of SW: ✅ Pass request AS-IS
-    
+
     Middleware->>Middleware: service-worker.ts
     Note right of Middleware: Detects sec-fetch-dest: iframe<br/>OR request.destination: 'iframe'<br/>Sets x-wf-fetch-dest: iframe
-    
+
     Middleware->>Middleware: web.ts checks
     Note right of Middleware: effectiveFetchDest = 'iframe'<br/>✅ Returns stub document
-    
+
     Middleware-->>-SW: Stub HTML
     Note left of Middleware: Title: "Web Fragments: reframed"
-    
+
     SW-->>-Iframe: Stub document
     Iframe->>Iframe: Check title = "Web Fragments: reframed"
     Note right of Iframe: ✅ Validation passes!
-    
+
     Iframe->>Iframe: Initialize reframed context
     Iframe->>Iframe: Execute scripts from shadow DOM
-    
+
     Iframe-->>-WFH: ✅ Ready
     WFH-->>-WF: ✅ Fragment initialized
     WF-->>-Browser: ✅ Interactive fragment!
