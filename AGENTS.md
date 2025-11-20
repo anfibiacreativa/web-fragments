@@ -14,16 +14,19 @@
 ### 1. Production Code Protection
 
 **DO NOT MODIFY** any code under `packages/` except for:
+
 - `packages/web-fragments/src/gateway/middleware/web-for-sw.ts` (SW-specific middleware - IN DEVELOPMENT)
 - `packages/web-fragments/src/gateway/middleware/service-worker.ts` (SW wrapper - IN DEVELOPMENT)
 
 **PRODUCTION CODE (DO NOT TOUCH):**
+
 - `packages/web-fragments/src/gateway/middleware/web.ts` - PRODUCTION, WORKING
 - `packages/web-fragments/src/gateway/fragment-gateway.ts` - PRODUCTION, WORKING
 - `packages/web-fragments/src/elements/**` - PRODUCTION, WORKING
 - All other files under `packages/`
 
 **Temporary debugging only:**
+
 - You MAY add `console.log` statements for debugging
 - You MUST remove them before final commit
 - DO NOT change any logic, types, or structure
@@ -33,6 +36,7 @@
 **The goal of Service Worker support is to enable the fragment gateway middleware to run in a Service Worker context**, avoiding the need for backend-side deployment. The middleware should work the same way it does in Express, Connect, or Web platforms (like Cloudflare Workers), but executed entirely in the browser's Service Worker.
 
 This means:
+
 - Service Worker intercepts fragment requests
 - Gateway middleware processes them client-side
 - Fragment responses are fetched and composed in the browser
@@ -43,10 +47,12 @@ This means:
 **MANDATORY - Read these files BEFORE making ANY architectural decisions or assessments:**
 
 1. **Flow Diagrams:**
+
    - `/e2e/sw-vite-test/expected-flow.mmd` - The expected request/response flow
    - `/e2e/sw-vite-test/header-flow.mmd` - Header transformation chain
 
 2. **Documentation:**
+
    - `/docs/src/pages/documentation/gateway.md` - Gateway architecture and requirements
    - `/docs/src/pages/documentation/elements.md` - Fragment elements behavior
    - `/docs/src/pages/documentation/getting-started.md` - Setup and configuration
@@ -74,7 +80,9 @@ This means:
 #### Asset Routing is Critical:
 
 From `gateway.md`:
+
 > A typical fragment has two kinds of url patterns which you need to configure in `routePatterns`:
+>
 > - The routable url pattern — navigating to a url matching this pattern with the browser should invoke a fragment
 > - The asset url pattern — a pattern which uniquely identifies static assets of a fragment belonging to a particular fragment. We recommend using `/_fragment/<fragment-id>/` prefix to ensure uniqueness.
 
@@ -83,6 +91,7 @@ From `gateway.md`:
 ### 4. Testing Changes
 
 Before proposing any solution:
+
 1. Verify against the expected flow diagram
 2. Check that headers are preserved correctly through the chain
 3. Ensure asset requests are routed to fragment endpoints
@@ -91,6 +100,7 @@ Before proposing any solution:
 ### 5. Communication
 
 When discussing issues:
+
 - Reference specific line numbers from flow diagrams
 - Quote relevant documentation sections
 - Explain which part of the header transformation chain is affected
@@ -99,6 +109,7 @@ When discussing issues:
 ### 6. Common Pitfalls to Avoid
 
 ❌ **DON'T:**
+
 - Modify production code without explicit permission
 - Make assumptions without reading the docs
 - Bypass asset requests in the Service Worker
@@ -107,6 +118,7 @@ When discussing issues:
 - Guess at architectural decisions
 
 ✅ **DO:**
+
 - Read the flow diagrams first
 - Understand the complete request/response cycle
 - Preserve all headers through the transformation chain
@@ -117,11 +129,13 @@ When discussing issues:
 ## Current Work Context
 
 **Active Development:**
+
 - Service Worker support for fragment gateway
 - File: `packages/web-fragments/src/gateway/middleware/web-for-sw.ts`
 - Test environment: `e2e/sw-vite-test/`
 
 **Known Working (Production):**
+
 - Non-SW middleware: `web.ts`
 - Fragment elements and custom elements
 - Gateway routing and fragment registration
@@ -130,6 +144,7 @@ When discussing issues:
 ## Questions?
 
 If you're unsure about anything:
+
 1. Read the relevant documentation section
 2. Check the flow diagrams
 3. Ask for clarification
