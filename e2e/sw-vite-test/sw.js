@@ -56,71 +56,38 @@ const middleware = getServiceWorkerMiddleware(gateway, {
 
 self.addEventListener('fetch', (event) => {
 	const url = new URL(event.request.url);
-	const secFetchDest = event.request.headers.get('sec-fetch-dest');
 
-	// Only log for our fragment routes to reduce noise
-	if (url.pathname.startsWith('/remix-page') || url.pathname.startsWith('/qwik-page')) {
-		console.log('[SW] Fetch event:', url.pathname, 'sec-fetch-dest:', secFetchDest);
-		console.log('[SW] Request headers:', Object.fromEntries(event.request.headers.entries()));
-	}
+	event.respondWith(
+		(async () => {
+			// Create a next() function that fetches from the origin server
+			const next = async () => {
+				// For fragment routes, fetch the corresponding HTML shell
+				const requestFragmentId = event.request.headers.get('x-web-fragment-id') ?? undefined;
+				const matchedFragment = gateway.matchRequestToFragment(url.pathname + url.search, requestFragmentId);
 
-	if (event.request.method !== 'GET') {
-		return;
-	}
-
-	if (event.request.headers.get('X-Service-Worker-Bypass') === 'true') {
-		return;
-	}
-
-	if (event.request.headers.get('x-fragment-mode') === 'embedded') {
-		// Fragment requests from the gateway should bypass the SW to avoid loops
-		return;
-	}
-
-	// Check if this is a fragment route
-	const requestFragmentId = event.request.headers.get('x-web-fragment-id') ?? undefined;
-	const matchedFragment = gateway.matchRequestToFragment(url.pathname + url.search, requestFragmentId);
-
-	// Only intercept fragment routes
-	if (matchedFragment) {
-		console.log(
-			'[SW] Intercepting fragment route:',
-			url.pathname,
-			'matched fragment:',
-			matchedFragment.fragmentId,
-			'sec-fetch-dest:',
-			secFetchDest,
-			'destination:',
-			event.request.destination,
-			'mode:',
-			event.request.mode,
-		);
-
-		event.respondWith(
-			(async () => {
-				// Create a next() function that fetches the HTML shell from the origin server
-				// We need to bypass the service worker to avoid infinite loops
-				const next = async () => {
+				if (matchedFragment) {
 					// Use the first path segment as the shell name (e.g., /qwik-page/details -> /qwik-page.html)
 					const [, shellSegment = 'index'] = url.pathname.split('/');
 					const htmlPath = `/${shellSegment || 'index'}.html`;
 					const htmlUrl = new URL(htmlPath, self.location.origin);
 					console.log('[SW] Fetching HTML shell from:', htmlUrl.href);
 
-					// Fetch with a header to bypass this service worker if needed
 					return fetch(htmlUrl, {
 						headers: {
 							'X-Service-Worker-Bypass': 'true',
 						},
 					});
-				};
+				}
 
-				const response = await middleware(event.request, next);
-				console.log('[SW] Middleware returned response:', response);
-				return response;
-			})(),
-		);
-	}
+				// For non-fragment routes, just fetch normally
+				return fetch(event.request);
+			};
+
+			const response = await middleware(event.request, next);
+			console.log('[SW] Middleware returned response for:', url.pathname);
+			return response;
+		})(),
+	);
 });
 
 self.addEventListener('install', (event) => {
@@ -134,3 +101,5 @@ self.addEventListener('activate', (event) => {
 	// Take control of all clients immediately
 	event.waitUntil(self.clients.claim());
 });
+
+console.log('[XXXXXXXX] Service Worker script loaded');

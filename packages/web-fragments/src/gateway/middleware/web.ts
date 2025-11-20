@@ -39,6 +39,8 @@ export function getWebMiddleware(
 		}
 
 		const requestSecFetchDest = request.headers.get('sec-fetch-dest');
+		// Service workers lose the Fetch-Metadata header when cloning navigate requests; fallback to Request.destination.
+		const requestDestination = (request as Request & { destination?: string }).destination;
 
 		/**
 		 * Handle IFrame request from reframed
@@ -50,17 +52,19 @@ export function getWebMiddleware(
 		 *
 		 * However, we don't want the iframe's document to actually contain the fragment's content; we're only using it as an isolated execution context. Returning a stub document here is our workaround to that problem.
 		 */
-		// TODO: SW-WORKAROUND - In Service Workers, creating a new Request with mode:'cors' strips sec-fetch-dest header.
-		// As a temporary workaround, the SW wrapper sets x-wf-fetch-dest to preserve the original destination.
-		// This should be removed once we find a better solution.
+		// TODO: SW-WORKAROUND - Service Workers strip sec-fetch-dest when cloning navigate requests with mode:'cors'.
+		// We first fall back to Request.destination (available in modern Chrome/Firefox/Safari); legacy SW wrapper still
+		// supplies x-wf-fetch-dest as a final safety net. Drop this once browsers retain Fetch-Metadata for SW clones.
 		const xwfFetchDest = request.headers.get('x-wf-fetch-dest');
-		const effectiveFetchDest = requestSecFetchDest || xwfFetchDest;
+		const effectiveFetchDest = requestSecFetchDest || requestDestination || xwfFetchDest;
 
 		console.log(
 			'[Web Middleware] Fragment:',
 			matchedFragment.fragmentId,
 			'sec-fetch-dest:',
 			requestSecFetchDest,
+			'request.destination:',
+			requestDestination,
 			'x-wf-fetch-dest:',
 			xwfFetchDest,
 			'effective:',
@@ -270,7 +274,9 @@ export function getWebMiddleware(
 				? [requestUrl, endpoint]
 				: [new URL(`${requestUrl.pathname}${requestUrl.search}`, endpoint), globalThis.fetch];
 
-		const fetchingToPierce = originalRequest.headers.get('sec-fetch-dest') === 'document';
+		const originalRequestDestination = (originalRequest as Request & { destination?: string }).destination;
+		const fetchingToPierce =
+			(originalRequest.headers.get('sec-fetch-dest') || originalRequestDestination) === 'document';
 
 		const fragmentReq = new Request(fragmentReqUrl, originalRequest);
 
