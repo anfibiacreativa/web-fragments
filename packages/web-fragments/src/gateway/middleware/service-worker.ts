@@ -82,12 +82,8 @@ export function getServiceWorkerMiddleware(
 		const headers = new Headers(request.headers);
 		if (secFetchDest) {
 			headers.set('x-wf-fetch-dest', secFetchDest);
-			console.log('[SW Middleware] Preserving sec-fetch-dest:', secFetchDest, 'in x-wf-fetch-dest');
 		} else if (requestDestination) {
 			headers.set('x-wf-fetch-dest', requestDestination);
-			console.log('[SW Middleware] Derived destination from request.destination:', requestDestination);
-		} else {
-			console.log('[SW Middleware] No sec-fetch-dest header or request.destination found on original request');
 		}
 
 		// TODO: SW-WORKAROUND - Use same-origin credentials to avoid CORS issues with wildcard headers
@@ -104,8 +100,6 @@ export function getServiceWorkerMiddleware(
 			redirect: request.redirect === 'manual' ? 'follow' : request.redirect,
 			integrity: request.integrity,
 		});
-		console.log('[SW Middleware] Safe request headers:', Object.fromEntries(safeRequest.headers.entries()));
-
 		return webMiddleware(safeRequest, next);
 	};
 }
