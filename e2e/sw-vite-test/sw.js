@@ -50,7 +50,6 @@ const middleware = getServiceWorkerMiddleware(gateway, {
 		const wasmResponse = await fetch(wasmUrl);
 		await init(wasmResponse);
 		self.HTMLRewriter = HTMLRewriter;
-		console.log('[SW] HTMLRewriter polyfill initialized');
 	},
 });
 
@@ -65,14 +64,12 @@ self.addEventListener('fetch', (event) => {
 				const requestFragmentId = event.request.headers.get('x-web-fragment-id') ?? undefined;
 				const matchedFragment = gateway.matchRequestToFragment(url.pathname + url.search, requestFragmentId);
 
-				if (matchedFragment) {
-					// Use the first path segment as the shell name (e.g., /qwik-page/details -> /qwik-page.html)
-					const [, shellSegment = 'index'] = url.pathname.split('/');
-					const htmlPath = `/${shellSegment || 'index'}.html`;
-					const htmlUrl = new URL(htmlPath, self.location.origin);
-					console.log('[SW] Fetching HTML shell from:', htmlUrl.href);
+			if (matchedFragment) {
+				const [, shellSegment = 'index'] = url.pathname.split('/');
+				const htmlPath = `/${shellSegment || 'index'}.html`;
+				const htmlUrl = new URL(htmlPath, self.location.origin);
 
-					return fetch(htmlUrl, {
+				return fetch(htmlUrl, {
 						headers: {
 							'X-Service-Worker-Bypass': 'true',
 						},
@@ -83,23 +80,15 @@ self.addEventListener('fetch', (event) => {
 				return fetch(event.request);
 			};
 
-			const response = await middleware(event.request, next);
-			console.log('[SW] Middleware returned response for:', url.pathname);
-			return response;
+			return middleware(event.request, next);
 		})(),
 	);
 });
 
-self.addEventListener('install', (event) => {
-	console.log('[SW] Service Worker installed');
-	// Skip waiting to activate immediately
+self.addEventListener('install', () => {
 	self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-	console.log('[SW] Service Worker activated');
-	// Take control of all clients immediately
 	event.waitUntil(self.clients.claim());
 });
-
-console.log('[XXXXXXXX] Service Worker script loaded');
