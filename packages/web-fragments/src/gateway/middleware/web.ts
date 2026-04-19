@@ -58,19 +58,6 @@ export function getWebMiddleware(
 		const xwfFetchDest = request.headers.get('x-wf-fetch-dest');
 		const effectiveFetchDest = requestSecFetchDest || requestDestination || xwfFetchDest;
 
-		console.log(
-			'[Web Middleware] Fragment:',
-			matchedFragment.fragmentId,
-			'sec-fetch-dest:',
-			requestSecFetchDest,
-			'request.destination:',
-			requestDestination,
-			'x-wf-fetch-dest:',
-			xwfFetchDest,
-			'effective:',
-			effectiveFetchDest,
-		);
-
 		if (effectiveFetchDest === 'iframe') {
 			// The title below is used be reframed to detect gateway misconfiguration. See reframed.ts
 			return new Response('<!doctype html><title>Web Fragments: reframed</title>', {
@@ -100,42 +87,22 @@ export function getWebMiddleware(
 		 * For hard navigations we need to combine the appShell response with fragment response.
 		 */
 		if (effectiveFetchDest === 'document') {
-			console.log('[Web] PIERCING FLOW ENTERED - effectiveFetchDest=document, piercing:', matchedFragment.piercing);
 			// Fetch the app shell response from the origin and clone it so we can modify it
-			console.log('[Web] Fetching shell HTML via next()');
 			const originalNextResponse = await next();
-			console.log('[Web] Shell response received:', originalNextResponse.status, originalNextResponse.ok);
 			const appShellResponse = new Response(originalNextResponse.body, originalNextResponse);
 
 			const isHTMLResponse = appShellResponse.headers.get('content-type')?.startsWith('text/html');
-			console.log(
-				'[Web] Shell validation - ok:',
-				appShellResponse.ok,
-				'isHTML:',
-				isHTMLResponse,
-				'piercing:',
-				matchedFragment.piercing,
-			);
 
 			// If the app shell response is an error or not HTML or we are not piercing, pass it through to the client
 			if (!appShellResponse.ok || !isHTMLResponse || !matchedFragment.piercing) {
-				console.log('[Web] EARLY RETURN - Shell validation failed or not piercing');
 				appShellResponse.headers.append('vary', 'sec-fetch-dest');
 				appShellResponse.headers.append('x-web-fragment-id', '<app-shell>');
 				return appShellResponse;
 			}
 
 			// Combine the html responses from the fragment and app shell
-			console.log('[Web] About to combine shell and fragment responses');
 			return fragmentResponsePromise!
 				.then(function rejectErrorResponses(response: Response) {
-					console.log(
-						'[Web] Fragment response received:',
-						response.status,
-						response.ok,
-						'content-type:',
-						response.headers.get('content-type'),
-					);
 					if (response.ok) return response;
 					throw response;
 				})
@@ -144,7 +111,6 @@ export function getWebMiddleware(
 				.then(prefixHtmlHeadBody)
 				.then(neutralizeScriptAndLinkTags)
 				.then((fragmentResponse) => {
-					console.log('[Web] Calling embedFragmentIntoShellApp with fragment:', matchedFragment.fragmentId);
 					return embedFragmentIntoShellApp({
 						appShellResponse,
 						fragmentResponse,
@@ -153,7 +119,6 @@ export function getWebMiddleware(
 					});
 				})
 				.then((combinedResponse) => {
-					console.log('[Web] Combined response created successfully');
 					// Append Vary header to prevent BFCache issues
 					combinedResponse.headers.append('vary', 'sec-fetch-dest');
 					// Append X-Web-Fragment-Id for debugging purposes
