@@ -16,7 +16,6 @@ import Root from './root';
 
 export default function (opts: RenderToStreamOptions) {
 	const requestHeaders = opts.serverData?.requestHeaders ?? {};
-	const isEmbedded = requestHeaders['x-fragment-mode'] === 'embedded';
 	/**
 	 * Qwik needs to know what's the origin URL on the client-side so that it can correctly form all urls
 	 * and perform routing.
@@ -56,13 +55,9 @@ export default function (opts: RenderToStreamOptions) {
 				prefetchEvent: 'always',
 			},
 		},
-		qwikLoader: isEmbedded
-			? {
-					include: 'never',
-				}
-			: {
-					include: 'always',
-					position: 'bottom',
-				},
+		qwikLoader: {
+			include: 'always',
+			position: 'bottom',
+		},
 	});
 }
