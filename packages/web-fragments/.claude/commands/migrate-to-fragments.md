@@ -1,3 +1,8 @@
+---
+name: migrate-to-fragments
+description: Analyze an existing app and produce a phased web-fragments migration plan — identifies fragment candidates, gateway placement, and shared state risks.
+---
+
 Analyze this project and produce a web-fragments migration plan. Context: $ARGUMENTS
 
 ## Step 1 — Understand the current architecture

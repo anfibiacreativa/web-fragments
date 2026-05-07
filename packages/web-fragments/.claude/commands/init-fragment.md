@@ -1,3 +1,8 @@
+---
+name: init-fragment
+description: Scaffold a new web-fragment end-to-end — generates gateway registration, app shell placeholder, and fragment HTML stub.
+---
+
 Scaffold a new web-fragment end-to-end. Work through the following steps:
 
 1. Ask the user (or infer from $ARGUMENTS) for:

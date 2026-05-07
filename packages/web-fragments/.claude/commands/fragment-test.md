@@ -1,3 +1,8 @@
+---
+name: fragment-test
+description: Generate a Playwright test scenario for a web-fragment — produces index.html, fragment.html, and spec.ts following the playground test harness pattern.
+---
+
 Generate a Playwright test for a web-fragment scenario. Scenario: $ARGUMENTS
 
 Web-fragments tests use three files per scenario under `test/playground/<scenario-name>/`:

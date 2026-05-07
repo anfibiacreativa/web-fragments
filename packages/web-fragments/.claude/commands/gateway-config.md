@@ -1,3 +1,8 @@
+---
+name: gateway-config
+description: Review or generate a FragmentGateway configuration — flags deprecated fields, missing error handlers, and middleware ordering issues.
+---
+
 Review or generate the FragmentGateway configuration for this project. Arguments: $ARGUMENTS
 
 ## What to do

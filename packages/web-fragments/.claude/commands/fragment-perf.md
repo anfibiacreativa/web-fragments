@@ -1,3 +1,8 @@
+---
+name: fragment-perf
+description: Audit a web-fragments setup for performance issues — checks piercing config, streaming, caching, route pattern specificity, and production mode.
+---
+
 Audit this web-fragments setup for performance issues. Context: $ARGUMENTS
 
 Read the gateway configuration and fragment endpoint code, then check each category.

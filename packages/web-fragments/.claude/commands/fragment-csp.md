@@ -1,3 +1,8 @@
+---
+name: fragment-csp
+description: Generate or audit Content Security Policy headers for a web-fragments setup — ensures the iframe isolation model is not blocked by X-Frame-Options or frame-ancestors directives.
+---
+
 Generate or audit Content Security Policy headers for a web-fragments setup. Context: $ARGUMENTS
 
 ## How web-fragments uses iframes

@@ -1,3 +1,8 @@
+---
+name: debug-fragment
+description: Diagnose a web-fragments issue — covers invisible fragments, broken piercing, FOUC, JS isolation failures, and CSP/iframe blocks.
+---
+
 Diagnose a web-fragments issue. The user's description (if any): $ARGUMENTS
 
 Work through each category below. For each check, inspect actual project files — do not guess. Skip categories the user's problem clearly does not relate to.
