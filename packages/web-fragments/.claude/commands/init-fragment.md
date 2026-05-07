@@ -6,6 +6,7 @@ description: Scaffold a new web-fragment end-to-end — generates gateway regist
 Scaffold a new web-fragment end-to-end. Work through the following steps:
 
 1. Ask the user (or infer from $ARGUMENTS) for:
+
    - `fragmentId` — a short kebab-case identifier, e.g. `user-profile`
    - `routePatterns` — one or more path-to-regexp patterns, e.g. `/profile/:userId`, `/profile/:_*`
    - Deployment target: `cloudflare` (Cloudflare Workers / Pages) or `node` (Express / Connect)
@@ -16,12 +17,13 @@ Scaffold a new web-fragment end-to-end. Work through the following steps:
 2. Generate the **gateway registration** block to add to the user's gateway setup file:
 
 For Cloudflare Workers (`web-middleware`):
+
 ```ts
 import { FragmentGateway } from 'web-fragments/gateway';
 import { getWebMiddleware } from 'web-fragments/gateway';
 
 const gateway = new FragmentGateway({
-  piercingStyles: `
+	piercingStyles: `
     <style>
       web-fragment-host[data-piercing="true"] {
         position: absolute;
@@ -32,28 +34,27 @@ const gateway = new FragmentGateway({
 });
 
 gateway.registerFragment({
-  fragmentId: '<fragmentId>',
-  routePatterns: ['<routePattern>'],
-  endpoint: '<endpoint>',
-  piercing: true,
-  piercingClassNames: ['<fragmentId>'],
-  onSsrFetchError: () => ({
-    response: new Response('<p><fragmentId> is unavailable.</p>', {
-      headers: { 'content-type': 'text/html' },
-    }),
-  }),
+	fragmentId: '<fragmentId>',
+	routePatterns: ['<routePattern>'],
+	endpoint: '<endpoint>',
+	piercing: true,
+	piercingClassNames: ['<fragmentId>'],
+	onSsrFetchError: () => ({
+		response: new Response('<p><fragmentId> is unavailable.</p>', {
+			headers: { 'content-type': 'text/html' },
+		}),
+	}),
 });
 
 export default {
-  fetch(request, env, ctx) {
-    return getWebMiddleware(gateway, { mode: 'production' })(request, () =>
-      env.ASSETS.fetch(request),
-    );
-  },
+	fetch(request, env, ctx) {
+		return getWebMiddleware(gateway, { mode: 'production' })(request, () => env.ASSETS.fetch(request));
+	},
 };
 ```
 
 For Node / Express:
+
 ```ts
 import { FragmentGateway } from 'web-fragments/gateway';
 import { getNodeMiddleware } from 'web-fragments/gateway/node';
@@ -61,15 +62,15 @@ import { getNodeMiddleware } from 'web-fragments/gateway/node';
 const gateway = new FragmentGateway({ piercingStyles: '' });
 
 gateway.registerFragment({
-  fragmentId: '<fragmentId>',
-  routePatterns: ['<routePattern>'],
-  endpoint: '<endpoint>',
-  piercing: true,
-  onSsrFetchError: () => ({
-    response: new Response('<p><fragmentId> is unavailable.</p>', {
-      headers: { 'content-type': 'text/html' },
-    }),
-  }),
+	fragmentId: '<fragmentId>',
+	routePatterns: ['<routePattern>'],
+	endpoint: '<endpoint>',
+	piercing: true,
+	onSsrFetchError: () => ({
+		response: new Response('<p><fragmentId> is unavailable.</p>', {
+			headers: { 'content-type': 'text/html' },
+		}),
+	}),
 });
 
 app.use(getNodeMiddleware(gateway, { mode: 'development' }));
@@ -82,6 +83,7 @@ app.use(getNodeMiddleware(gateway, { mode: 'development' }));
 ```
 
 Remind the user that `initializeWebFragments()` from `web-fragments` must be called once in the app shell's client-side entry point:
+
 ```ts
 import { initializeWebFragments } from 'web-fragments';
 initializeWebFragments();
@@ -92,16 +94,16 @@ initializeWebFragments();
 ```html
 <!doctype html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title><fragmentId> fragment</title>
-  </head>
-  <body>
-    <div id="app">
-      <!-- <fragmentId> renders here -->
-    </div>
-    <script type="module" src="/entry.js"></script>
-  </body>
+	<head>
+		<meta charset="UTF-8" />
+		<title><fragmentId> fragment</title>
+	</head>
+	<body>
+		<div id="app">
+			<!-- <fragmentId> renders here -->
+		</div>
+		<script type="module" src="/entry.js"></script>
+	</body>
 </html>
 ```
 

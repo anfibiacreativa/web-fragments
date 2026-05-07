@@ -12,16 +12,19 @@ Work through each category below. For each check, inspect actual project files â
 ## 1. Fragment does not appear at all
 
 **Gateway routing:**
+
 - Does the request URL match any `routePatterns`? Patterns use path-to-regexp v6. A common mistake: `/products` does NOT match `/products/123` â€” use `/products/:_*` to match sub-paths.
 - Is `matchRequestToFragment` being reached? Add `console.log` to the middleware to verify.
 - Is the middleware placed before static file serving? If Express/Connect serves `index.html` before the fragment middleware runs, the gateway never sees the request.
 
 **Fragment endpoint reachability:**
+
 - Is the `endpoint` URL accessible from the gateway? In local dev, check the port is running.
 - Does the fragment endpoint return a 200 for the route? A 404 or 500 triggers `onSsrFetchError` (or a default error response if that handler is missing).
 - Does the endpoint set `X-Frame-Options: DENY`? This blocks the hidden iframe the gateway uses for isolated JS execution. The gateway detects this but the fragment will silently fail to load.
 
 **Client-side initialization:**
+
 - Is `initializeWebFragments()` called before any `<web-fragment>` element connects to the DOM?
 - Is the `fragment-id` attribute on `<web-fragment>` an exact case-sensitive match to the `fragmentId` in `registerFragment()`?
 
@@ -49,12 +52,14 @@ Work through each category below. For each check, inspect actual project files â
 ## 4. Fragment JavaScript not executing / broken behavior
 
 **Reframed context issues:**
+
 - Is the fragment's entry script a `<script type="module">`? Module scripts are correctly deferred and execute in the reframed iframe context.
 - Is the fragment reading `window.location` and getting the wrong origin? In the reframed context, `window.location` reflects the fragment URL, which is correct. If the fragment is comparing against `window.parent`, that is unexpected â€” fragments should be self-contained.
 - Is the fragment using `document.querySelector` and finding nothing? Within the reframed iframe context, `document` refers to the iframe document. DOM elements are actually in the main frame's shadow root. Use `window.document` consistently rather than global `document` â€” the reframed context patches them to be equivalent, but third-party libraries may cache a direct reference.
 - Is a third-party script failing with a `crossOrigin` or `instanceof` error? The reframed context patches global constructors, but some libraries perform identity checks that bypass the patch. This is a known limitation â€” report it at https://github.com/web-fragments/web-fragments/issues.
 
 **History / navigation:**
+
 - Is `window.history.pushState` in the fragment navigating only the fragment, not the full page? This is correct behavior â€” history is shared with the main frame. If the main frame is not responding to the navigation, check that the host SPA's router listens to `popstate` events.
 
 ---
@@ -71,6 +76,7 @@ Work through each category below. For each check, inspect actual project files â
 ## Output
 
 For each failing check, show:
+
 1. What you found (with file path and line number if applicable)
 2. The specific fix
 3. Whether the fix can be applied automatically (and apply it if yes)

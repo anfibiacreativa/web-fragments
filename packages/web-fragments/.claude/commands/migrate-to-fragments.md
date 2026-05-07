@@ -8,6 +8,7 @@ Analyze this project and produce a web-fragments migration plan. Context: $ARGUM
 ## Step 1 — Understand the current architecture
 
 Read the project files to determine:
+
 - Is this a monolithic SSR app, a SPA, or a mix?
 - What server framework is in use (Express, Fastify, Cloudflare Workers, Next.js, Remix, etc.)?
 - What frontend framework is in use (React, Vue, Angular, vanilla, etc.)?
@@ -17,12 +18,14 @@ Read the project files to determine:
 ## Step 2 — Identify fragment candidates
 
 A good fragment candidate:
+
 - Has distinct ownership (different team, different release cadence)
 - Has a bounded URL namespace (e.g. `/account/`, `/checkout/`, `/admin/`)
 - Does NOT share mutable client-side state with other sections (read-only shared state like user identity is fine)
 - Can be independently built and deployed
 
 List each candidate with:
+
 - Proposed `fragmentId`
 - Proposed `routePatterns` (path-to-regexp v6 syntax, e.g. `/account/:_*`)
 - Current location in the monolith
@@ -32,11 +35,13 @@ List each candidate with:
 ## Step 3 — Propose gateway placement
 
 Determine where the `FragmentGateway` middleware should live:
+
 - **Cloudflare Workers/Pages**: a `functions/_middleware.ts` or dedicated Worker
 - **Express/Connect**: middleware added before static file serving
 - **Next.js / Remix**: a separate gateway proxy in front of the app
 
 Gateway stub for **Express**:
+
 ```ts
 import { FragmentGateway } from 'web-fragments/gateway';
 import { getNodeMiddleware } from 'web-fragments/gateway/node';
@@ -49,6 +54,7 @@ app.use(getNodeMiddleware(gateway, { mode: 'development' }));
 ```
 
 Gateway stub for **Cloudflare Workers**:
+
 ```ts
 import { FragmentGateway } from 'web-fragments/gateway';
 import { getWebMiddleware } from 'web-fragments/gateway';
@@ -56,11 +62,9 @@ import { getWebMiddleware } from 'web-fragments/gateway';
 const gateway = new FragmentGateway({ piercingStyles: '' });
 
 export default {
-  fetch(request, env, ctx) {
-    return getWebMiddleware(gateway, { mode: 'production' })(request, () =>
-      env.ASSETS.fetch(request),
-    );
-  },
+	fetch(request, env, ctx) {
+		return getWebMiddleware(gateway, { mode: 'production' })(request, () => env.ASSETS.fetch(request));
+	},
 };
 ```
 
@@ -83,6 +87,7 @@ List any global client-side state (Redux, Zustand, `window.*` globals, global CS
 ## Output
 
 Produce a markdown document with:
+
 - Architecture summary (2-3 sentences)
 - Fragment candidate table: fragmentId | routePatterns | complexity | owner
 - Gateway placement recommendation with code

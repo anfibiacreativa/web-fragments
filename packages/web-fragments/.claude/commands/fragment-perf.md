@@ -39,6 +39,7 @@ Piercing embeds fragment HTML into the app shell response server-side, eliminati
 ## Output
 
 For each issue:
+
 1. Severity: **High** (user-visible regression) / **Medium** (latency increase) / **Low** (optimization opportunity)
 2. What was found (with file path and line number)
 3. The specific fix

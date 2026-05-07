@@ -17,8 +17,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = process.env.INIT_CWD ?? process.env.npm_config_local_prefix;
 
 if (!projectRoot) {
-  // Running outside of a package install (e.g. direct node call) — skip silently.
-  process.exit(0);
+	// Running outside of a package install (e.g. direct node call) — skip silently.
+	process.exit(0);
 }
 
 // Resolve the source (skills inside this package) and the link target (in the consuming project).
@@ -28,20 +28,20 @@ const target = resolve(commandsDir, 'web-fragments');
 
 // Skip if we are being installed inside our own repo (monorepo workspace install).
 if (resolve(projectRoot) === resolve(__dirname, '..')) {
-  process.exit(0);
+	process.exit(0);
 }
 
 try {
-  mkdirSync(commandsDir, { recursive: true });
+	mkdirSync(commandsDir, { recursive: true });
 
-  // Remove a stale symlink or directory from a previous install.
-  if (existsSync(target) || lstatSync(target).isSymbolicLink?.()) {
-    unlinkSync(target);
-  }
+	// Remove a stale symlink or directory from a previous install.
+	if (existsSync(target) || lstatSync(target).isSymbolicLink?.()) {
+		unlinkSync(target);
+	}
 
-  symlinkSync(source, target, 'dir');
-  console.log(`[web-fragments] Claude Code skills linked → ${target}`);
+	symlinkSync(source, target, 'dir');
+	console.log(`[web-fragments] Claude Code skills linked → ${target}`);
 } catch (err) {
-  // Non-fatal: symlink may fail in CI or restricted environments.
-  console.warn(`[web-fragments] Could not link Claude Code skills: ${err.message}`);
+	// Non-fatal: symlink may fail in CI or restricted environments.
+	console.warn(`[web-fragments] Could not link Claude Code skills: ${err.message}`);
 }
